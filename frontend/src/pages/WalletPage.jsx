@@ -1,0 +1,1164 @@
+import { useState, useEffect, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { 
+  LayoutDashboard, 
+  User,
+  Wallet,
+  Users,
+  Copy,
+  UserCircle,
+  HelpCircle,
+  FileText,
+  LogOut,
+  ArrowDownCircle,
+  ArrowUpCircle,
+  RefreshCw,
+  X,
+  Check,
+  Clock,
+  XCircle,
+  Building,
+  Smartphone,
+  QrCode,
+  Trophy,
+  ArrowRightLeft,
+  Send,
+  Download,
+  ArrowLeft,
+  Home,
+  Upload,
+  Image,
+  BookOpen,
+  Sun,
+  Moon,
+  CreditCard
+} from 'lucide-react'
+import { useTheme } from '../context/ThemeContext'
+import logo from '../assets/logo.png'
+
+import { API_URL } from '../config/api'
+
+const WalletPage = () => {
+  const navigate = useNavigate()
+  const { isDarkMode, toggleDarkMode } = useTheme()
+  const [activeMenu, setActiveMenu] = useState('Wallet')
+  const [sidebarExpanded, setSidebarExpanded] = useState(false)
+  const [wallet, setWallet] = useState(null)
+  const [transactions, setTransactions] = useState([])
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
+  const [paymentMethods, setPaymentMethods] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [showDepositModal, setShowDepositModal] = useState(false)
+  const [showWithdrawModal, setShowWithdrawModal] = useState(false)
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(null)
+  const [amount, setAmount] = useState('')
+  const [transactionRef, setTransactionRef] = useState('')
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
+  const [challengeModeEnabled, setChallengeModeEnabled] = useState(false)
+  const [currencies, setCurrencies] = useState([])
+  const [selectedCurrency, setSelectedCurrency] = useState(null)
+  const [localAmount, setLocalAmount] = useState('')
+  const [screenshot, setScreenshot] = useState(null)
+  const [screenshotPreview, setScreenshotPreview] = useState(null)
+  const [uploadingScreenshot, setUploadingScreenshot] = useState(false)
+  const [kycStatus, setKycStatus] = useState(null)
+  const [showKycWarning, setShowKycWarning] = useState(false)
+  const fileInputRef = useRef(null)
+  const [showCryptoDeposit, setShowCryptoDeposit] = useState(false)
+  const [cryptoAmount, setCryptoAmount] = useState('')
+  const [cryptoLoading, setCryptoLoading] = useState(false)
+  const [cryptoPaymentUrl, setCryptoPaymentUrl] = useState(null)
+  const [paymentGatewaySettings, setPaymentGatewaySettings] = useState(null)
+  const [userBankAccounts, setUserBankAccounts] = useState([])
+  const [selectedBankAccount, setSelectedBankAccount] = useState(null)
+  const [showNoBankWarning, setShowNoBankWarning] = useState(false)
+
+  const user = JSON.parse(localStorage.getItem('user') || '{}')
+
+  const menuItems = [
+    { name: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
+    { name: 'Account', icon: User, path: '/account' },
+    { name: 'Wallet', icon: Wallet, path: '/wallet' },
+    { name: 'Orders', icon: BookOpen, path: '/orders' },
+    { name: 'IB', icon: Users, path: '/ib' },
+    { name: 'Copytrade', icon: Copy, path: '/copytrade' },
+    { name: 'Profile', icon: UserCircle, path: '/profile' },
+    { name: 'Support', icon: HelpCircle, path: '/support' },
+  ]
+
+  // Handle screenshot file selection
+  const handleScreenshotChange = (e) => {
+    const file = e.target.files[0]
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        setError('Screenshot must be less than 5MB')
+        return
+      }
+      setScreenshot(file)
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setScreenshotPreview(reader.result)
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
+  // Download transactions as CSV
+  const downloadTransactionsCSV = () => {
+    const headers = ['Date', 'Type', 'Amount', 'Method', 'Status', 'Reference']
+    const rows = transactions.map(tx => [
+      new Date(tx.createdAt).toLocaleString(),
+      tx.type,
+      tx.amount.toFixed(2),
+      tx.paymentMethod || 'Internal',
+      tx.status,
+      tx.transactionRef || '-'
+    ])
+    
+    const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n')
+    const blob = new Blob([csvContent], { type: 'text/csv' })
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `transactions_${new Date().toISOString().split('T')[0]}.csv`
+    a.click()
+  }
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768)
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
+  useEffect(() => {
+    fetchChallengeStatus()
+    if (user._id) {
+      fetchWallet()
+      fetchTransactions()
+      fetchKycStatus()
+      fetchUserBankAccounts()
+    }
+    fetchPaymentMethods()
+    fetchCurrencies()
+    fetchPaymentGatewaySettings()
+  }, [user._id])
+
+  // Fetch user's saved bank accounts for withdrawal
+  const fetchUserBankAccounts = async () => {
+    try {
+      const res = await fetch(`${API_URL}/payment-methods/user-banks/${user._id}`)
+      const data = await res.json()
+      setUserBankAccounts(data.accounts || [])
+    } catch (error) {
+      console.error('Error fetching user bank accounts:', error)
+    }
+  }
+
+  // Fetch payment gateway settings to check if crypto is enabled
+  const fetchPaymentGatewaySettings = async () => {
+    try {
+      const res = await fetch(`${API_URL}/payment-gateway/settings`)
+      const data = await res.json()
+      if (data.success) {
+        setPaymentGatewaySettings({ oxapayEnabled: data.oxapayEnabled })
+      }
+    } catch (error) {
+      console.error('Error fetching payment gateway settings:', error)
+    }
+  }
+
+  const fetchKycStatus = async () => {
+    try {
+      const res = await fetch(`${API_URL}/kyc/status/${user._id}`)
+      const data = await res.json()
+      if (data.success && data.hasKYC) {
+        setKycStatus(data.kyc)
+      }
+    } catch (error) {
+      console.error('Error fetching KYC status:', error)
+    }
+  }
+
+  const fetchCurrencies = async () => {
+    try {
+      const res = await fetch(`${API_URL}/payment-methods/currencies/active`)
+      const data = await res.json()
+      setCurrencies(data.currencies || [])
+      // Set USD as default if no currencies
+      if (!data.currencies || data.currencies.length === 0) {
+        setSelectedCurrency({ currency: 'USD', symbol: '$', rateToUSD: 1, markup: 0 })
+      }
+    } catch (error) {
+      console.error('Error fetching currencies:', error)
+    }
+  }
+
+  // Calculate USD amount from local currency
+  const calculateUSDAmount = (localAmt, currency) => {
+    if (!currency || currency.currency === 'USD') return localAmt
+    const effectiveRate = currency.rateToUSD * (1 + (currency.markup || 0) / 100)
+    return localAmt / effectiveRate
+  }
+
+  // Calculate local amount from USD
+  const calculateLocalAmount = (usdAmt, currency) => {
+    if (!currency || currency.currency === 'USD') return usdAmt
+    const effectiveRate = currency.rateToUSD * (1 + (currency.markup || 0) / 100)
+    return usdAmt * effectiveRate
+  }
+
+  const fetchChallengeStatus = async () => {
+    try {
+      const res = await fetch(`${API_URL}/prop/status`)
+      const data = await res.json()
+      if (data.success) {
+        setChallengeModeEnabled(data.enabled)
+      }
+    } catch (error) {
+      console.error('Error fetching challenge status:', error)
+    }
+  }
+
+  const fetchWallet = async () => {
+    try {
+      const res = await fetch(`${API_URL}/wallet/${user._id}`)
+      const data = await res.json()
+      setWallet(data.wallet)
+    } catch (error) {
+      console.error('Error fetching wallet:', error)
+    }
+  }
+
+  const fetchTransactions = async () => {
+    setLoading(true)
+    try {
+      const res = await fetch(`${API_URL}/wallet/transactions/${user._id}`)
+      const data = await res.json()
+      setTransactions(data.transactions || [])
+    } catch (error) {
+      console.error('Error fetching transactions:', error)
+    }
+    setLoading(false)
+  }
+
+  const fetchPaymentMethods = async () => {
+    try {
+      const res = await fetch(`${API_URL}/payment-methods`)
+      const data = await res.json()
+      setPaymentMethods(data.paymentMethods || [])
+    } catch (error) {
+      console.error('Error fetching payment methods:', error)
+    }
+  }
+
+  const handleDeposit = async () => {
+    if (!user._id) {
+      setError('Please login to make a deposit')
+      return
+    }
+    if (!localAmount || parseFloat(localAmount) <= 0) {
+      setError('Please enter a valid amount')
+      return
+    }
+    if (!selectedPaymentMethod) {
+      setError('Please select a payment method')
+      return
+    }
+    if (!transactionRef || transactionRef.trim() === '') {
+      setError('Transaction Reference ID is required')
+      return
+    }
+    if (!screenshot && !screenshotPreview) {
+      setError('Payment screenshot is required')
+      return
+    }
+
+    // Amount is always in USD now
+    const usdAmount = parseFloat(localAmount)
+
+    try {
+      setUploadingScreenshot(true)
+      
+      // Upload screenshot first if provided
+      let screenshotUrl = null
+      if (screenshot) {
+        const formData = new FormData()
+        formData.append('screenshot', screenshot)
+        formData.append('userId', user._id)
+        
+        const uploadRes = await fetch(`${API_URL}/upload/screenshot`, {
+          method: 'POST',
+          body: formData
+        })
+        const uploadData = await uploadRes.json()
+        if (uploadData.success) {
+          screenshotUrl = uploadData.url
+        }
+      }
+
+      const res = await fetch(`${API_URL}/wallet/deposit`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user._id,
+          amount: usdAmount,
+          localAmount: usdAmount,
+          currency: 'USD',
+          currencySymbol: '$',
+          exchangeRate: 1,
+          markup: 0,
+          paymentMethod: selectedPaymentMethod.type,
+          transactionRef,
+          screenshot: screenshotUrl || screenshotPreview
+        })
+      })
+      const data = await res.json()
+      
+      if (res.ok) {
+        setSuccess('Deposit request submitted successfully!')
+        setShowDepositModal(false)
+        setAmount('')
+        setLocalAmount('')
+        setTransactionRef('')
+        setSelectedPaymentMethod(null)
+        setSelectedCurrency(null)
+        setScreenshot(null)
+        setScreenshotPreview(null)
+        fetchWallet()
+        fetchTransactions()
+        setTimeout(() => setSuccess(''), 3000)
+      } else {
+        setError(data.message || 'Failed to create deposit')
+      }
+    } catch (error) {
+      console.error('Deposit error:', error)
+      setError('Error submitting deposit. Please try again.')
+    } finally {
+      setUploadingScreenshot(false)
+    }
+  }
+
+  // Handle Crypto Deposit via OxaPay
+  const handleCryptoDeposit = async () => {
+    if (!user._id) {
+      setError('Please login to make a deposit')
+      return
+    }
+    if (!cryptoAmount || parseFloat(cryptoAmount) < 10) {
+      setError('Minimum crypto deposit is $10')
+      return
+    }
+
+    setCryptoLoading(true)
+    setError('')
+
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) {
+        setError('Please login to make a deposit')
+        setCryptoLoading(false)
+        return
+      }
+      
+      const res = await fetch(`${API_URL}/oxapay/create-deposit`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          userId: user._id,
+          amount: parseFloat(cryptoAmount)
+        })
+      })
+      const data = await res.json()
+      
+      // Handle 401 specifically
+      if (res.status === 401) {
+        setError('Session expired. Please login again.')
+        setCryptoLoading(false)
+        return
+      }
+      
+      if (data.success) {
+        setCryptoPaymentUrl(data.paymentUrl)
+        // Open payment URL in new tab
+        window.open(data.paymentUrl, '_blank')
+        setSuccess('Payment page opened! Complete your crypto payment there.')
+        setShowDepositModal(false)
+        setShowCryptoDeposit(false)
+        setCryptoAmount('')
+        fetchWallet()
+        fetchTransactions()
+        setTimeout(() => setSuccess(''), 5000)
+      } else {
+        setError(data.message || 'Failed to create crypto payment')
+      }
+    } catch (error) {
+      console.error('Crypto deposit error:', error)
+      setError('Error creating crypto payment. Please try again.')
+    } finally {
+      setCryptoLoading(false)
+    }
+  }
+
+  const handleWithdraw = async () => {
+    // Check KYC status before allowing withdrawal
+    if (!kycStatus || kycStatus.status?.toUpperCase() !== 'APPROVED') {
+      setShowKycWarning(true)
+      return
+    }
+
+    // Check if user has any approved bank accounts
+    const approvedAccounts = userBankAccounts.filter(acc => acc.status === 'APPROVED')
+    if (approvedAccounts.length === 0) {
+      setShowNoBankWarning(true)
+      return
+    }
+
+    if (!amount || parseFloat(amount) <= 0) {
+      setError('Please enter a valid amount')
+      return
+    }
+    if (!selectedBankAccount) {
+      setError('Please select a bank account for withdrawal')
+      return
+    }
+    if (wallet && parseFloat(amount) > wallet.balance) {
+      setError('Insufficient balance')
+      return
+    }
+
+    try {
+      const res = await fetch(`${API_URL}/wallet/withdraw`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user._id,
+          amount: parseFloat(amount),
+          paymentMethod: selectedBankAccount.type,
+          bankAccountId: selectedBankAccount._id,
+          bankDetails: {
+            bankName: selectedBankAccount.bankName,
+            accountNumber: selectedBankAccount.accountNumber,
+            accountHolderName: selectedBankAccount.accountHolderName,
+            ifscCode: selectedBankAccount.ifscCode,
+            upiId: selectedBankAccount.upiId
+          }
+        })
+      })
+      const data = await res.json()
+      
+      if (res.ok) {
+        setSuccess('Withdrawal request submitted successfully!')
+        setShowWithdrawModal(false)
+        setAmount('')
+        setSelectedBankAccount(null)
+        fetchWallet()
+        fetchTransactions()
+        setTimeout(() => setSuccess(''), 3000)
+      } else {
+        setError(data.message)
+      }
+    } catch (error) {
+      setError('Error submitting withdrawal')
+    }
+  }
+
+  const handleLogout = () => {
+    localStorage.removeItem('token')
+    localStorage.removeItem('user')
+    navigate('/user/login')
+  }
+
+  const getStatusIcon = (status) => {
+    switch (status) {
+      case 'Approved': 
+      case 'Completed': 
+        return <Check size={16} className="text-green-500" />
+      case 'Rejected': return <XCircle size={16} className="text-red-500" />
+      default: return <Clock size={16} className="text-yellow-500" />
+    }
+  }
+
+  const getPaymentIcon = (type) => {
+    switch (type) {
+      case 'Bank Transfer': return <Building size={18} />
+      case 'UPI': return <Smartphone size={18} />
+      case 'QR Code': return <QrCode size={18} />
+      default: return <Wallet size={18} />
+    }
+  }
+
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+  }
+
+  return (
+    <div className={`h-screen flex transition-colors duration-300 ${isDarkMode ? 'bg-dark-900' : 'bg-gray-100'}`}>
+      {/* Mobile Header */}
+      {isMobile && (
+        <header className={`fixed top-0 left-0 right-0 z-40 px-4 py-3 flex items-center gap-4 ${isDarkMode ? 'bg-dark-800 border-b border-gray-800' : 'bg-white border-b border-gray-200'}`}>
+          <button onClick={() => navigate('/mobile')} className={`p-2 -ml-2 rounded-lg ${isDarkMode ? 'hover:bg-dark-700' : 'hover:bg-gray-100'}`}>
+            <ArrowLeft size={22} className={isDarkMode ? 'text-white' : 'text-gray-900'} />
+          </button>
+          <h1 className={`font-semibold text-lg flex-1 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Wallet</h1>
+          <button onClick={toggleDarkMode} className={`p-2 rounded-lg ${isDarkMode ? 'text-yellow-400 hover:bg-dark-700' : 'text-blue-500 hover:bg-gray-100'}`}>
+            {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
+          </button>
+          <button onClick={() => navigate('/mobile')} className={`p-2 rounded-lg ${isDarkMode ? 'hover:bg-dark-700' : 'hover:bg-gray-100'}`}>
+            <Home size={20} className="text-gray-400" />
+          </button>
+        </header>
+      )}
+
+      {/* Collapsible Sidebar - Hidden on Mobile, Fixed */}
+      {!isMobile && (
+        <aside 
+          className={`${sidebarExpanded ? 'w-48' : 'w-16'} ${isDarkMode ? 'bg-dark-900 border-gray-800' : 'bg-white border-gray-200'} border-r flex flex-col h-screen sticky top-0 transition-all duration-300 ease-in-out`}
+          onMouseEnter={() => setSidebarExpanded(true)}
+          onMouseLeave={() => setSidebarExpanded(false)}
+        >
+          <div className="p-4 flex items-center justify-center shrink-0">
+            <img src={logo} alt="ProfitVisionFX" className="h-12 object-contain" />
+          </div>
+
+          <nav className="flex-1 px-2 overflow-y-auto">
+            {menuItems.map((item) => (
+              <button
+                key={item.name}
+                onClick={() => navigate(item.path)}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg mb-1 transition-colors ${
+                  activeMenu === item.name 
+                    ? 'bg-accent-green text-black' 
+                    : isDarkMode ? 'text-gray-400 hover:text-white hover:bg-dark-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                }`}
+                title={!sidebarExpanded ? item.name : ''}
+              >
+                <item.icon size={18} className="flex-shrink-0" />
+                {sidebarExpanded && <span className="text-sm font-medium whitespace-nowrap">{item.name}</span>}
+              </button>
+            ))}
+          </nav>
+
+          <div className={`p-2 border-t shrink-0 ${isDarkMode ? 'border-gray-800' : 'border-gray-200'}`}>
+            <button onClick={toggleDarkMode} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg mb-1 transition-colors ${isDarkMode ? 'text-yellow-400 hover:bg-dark-700' : 'text-blue-500 hover:bg-gray-100'}`}>
+              {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
+              {sidebarExpanded && <span className="text-sm font-medium">{isDarkMode ? 'Light Mode' : 'Dark Mode'}</span>}
+            </button>
+            <button 
+              onClick={handleLogout}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 transition-colors rounded-lg ${isDarkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900'}`}
+              title={!sidebarExpanded ? 'Log Out' : ''}
+            >
+              <LogOut size={18} className="flex-shrink-0" />
+              {sidebarExpanded && <span className="text-sm font-medium whitespace-nowrap">Log Out</span>}
+            </button>
+          </div>
+        </aside>
+      )}
+
+      {/* Main Content - Scrollable */}
+      <main className={`flex-1 overflow-y-auto ${isMobile ? 'pt-14' : ''}`}>
+        {!isMobile && (
+          <header className={`flex items-center justify-between px-6 py-4 border-b ${isDarkMode ? 'border-gray-800' : 'border-gray-200'}`}>
+            <div>
+              <h1 className={`text-xl font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Wallet</h1>
+              <p className={`text-sm ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>Manage your funds</p>
+            </div>
+          </header>
+        )}
+
+        <div className={`${isMobile ? 'p-4' : 'p-6'}`}>
+          {/* Success/Error Messages */}
+          {success && (
+            <div className="mb-4 p-3 bg-green-500/20 border border-green-500/50 rounded-lg text-green-500 flex items-center gap-2 text-sm">
+              <Check size={18} /> {success}
+            </div>
+          )}
+          {error && (
+            <div className="mb-4 p-3 bg-red-500/20 border border-red-500/50 rounded-lg text-red-500 text-sm">
+              {error}
+            </div>
+          )}
+
+          {/* Wallet Balance Card */}
+          <div className={`${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'} rounded-xl ${isMobile ? 'p-4' : 'p-6'} border mb-4`}>
+            <div className={`${isMobile ? '' : 'flex items-center justify-between'}`}>
+              <div>
+                <p className={`text-sm mb-1 ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>Available Balance</p>
+                <p className={`font-bold ${isMobile ? 'text-2xl' : 'text-4xl'} ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>${wallet?.balance?.toLocaleString() || '0.00'}</p>
+                <div className={`flex ${isMobile ? 'gap-4' : 'gap-6'} mt-3`}>
+                  <div>
+                    <p className="text-gray-500 text-xs">Pending Deposits</p>
+                    <p className="text-yellow-500 font-medium text-sm">${wallet?.pendingDeposits?.toLocaleString() || '0.00'}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500 text-xs">Pending Withdrawals</p>
+                    <p className="text-orange-500 font-medium text-sm">${wallet?.pendingWithdrawals?.toLocaleString() || '0.00'}</p>
+                  </div>
+                </div>
+              </div>
+              <div className={`flex gap-2 flex-wrap ${isMobile ? 'mt-4' : ''}`}>
+                <button
+                  onClick={() => {
+                    setShowDepositModal(true)
+                    setError('')
+                  }}
+                  className={`flex items-center gap-2 bg-accent-green text-black font-medium ${isMobile ? 'px-4 py-2 text-sm' : 'px-6 py-3'} rounded-lg hover:bg-accent-green/90 transition-colors`}
+                >
+                  <ArrowDownCircle size={isMobile ? 16 : 20} /> Deposit
+                </button>
+                <button
+                  onClick={() => {
+                    setShowWithdrawModal(true)
+                    setError('')
+                  }}
+                  className={`flex items-center gap-2 font-medium ${isMobile ? 'px-4 py-2 text-sm' : 'px-6 py-3'} rounded-lg transition-colors border ${isDarkMode ? 'bg-dark-700 text-white hover:bg-dark-600 border-gray-700' : 'bg-gray-100 text-gray-900 hover:bg-gray-200 border-gray-300'}`}
+                >
+                  <ArrowUpCircle size={isMobile ? 16 : 20} /> Withdraw
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Transaction History */}
+          <div className={`${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'} rounded-xl ${isMobile ? 'p-4' : 'p-5'} border`}>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className={`font-semibold text-lg ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Transaction History</h2>
+              <div className="flex items-center gap-2">
+                <button 
+                  onClick={downloadTransactionsCSV}
+                  disabled={transactions.length === 0}
+                  className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm disabled:opacity-50 ${isDarkMode ? 'bg-dark-700 hover:bg-dark-600 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-900'}`}
+                >
+                  <Download size={14} /> Download
+                </button>
+                <button 
+                  onClick={fetchTransactions}
+                  className="p-2 hover:bg-dark-700 rounded-lg transition-colors"
+                >
+                  <RefreshCw size={18} className={`text-gray-400 ${loading ? 'animate-spin' : ''}`} />
+                </button>
+              </div>
+            </div>
+
+            {loading ? (
+              <div className="flex items-center justify-center py-8">
+                <RefreshCw size={24} className="text-gray-500 animate-spin" />
+              </div>
+            ) : transactions.length === 0 ? (
+              <div className="text-center py-8">
+                <Wallet size={48} className="text-gray-600 mx-auto mb-3" />
+                <p className="text-gray-500">No transactions yet</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-gray-700">
+                      <th className="text-left text-gray-500 text-sm font-medium py-3 px-4">Type</th>
+                      <th className="text-left text-gray-500 text-sm font-medium py-3 px-4">Amount</th>
+                      <th className="text-left text-gray-500 text-sm font-medium py-3 px-4">Method</th>
+                      <th className="text-left text-gray-500 text-sm font-medium py-3 px-4">Status</th>
+                      <th className="text-left text-gray-500 text-sm font-medium py-3 px-4">Date</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {transactions.map((tx) => (
+                      <tr key={tx._id} className="border-b border-gray-800">
+                        <td className="py-4 px-4">
+                          <div className="flex items-center gap-2">
+                            {tx.type === 'Deposit' && <ArrowDownCircle size={18} className="text-green-500" />}
+                            {tx.type === 'Withdrawal' && <ArrowUpCircle size={18} className="text-red-500" />}
+                            {tx.type === 'Transfer_To_Account' && <Send size={18} className="text-blue-500" />}
+                            {tx.type === 'Transfer_From_Account' && <Download size={18} className="text-purple-500" />}
+                            {tx.type === 'Account_Transfer_Out' && <ArrowUpCircle size={18} className="text-orange-500" />}
+                            {tx.type === 'Account_Transfer_In' && <ArrowDownCircle size={18} className="text-teal-500" />}
+                            <div>
+                              <span className="text-white">
+                                {tx.type === 'Transfer_To_Account' ? 'To Trading Account' : 
+                                 tx.type === 'Transfer_From_Account' ? 'From Trading Account' : 
+                                 tx.type === 'Account_Transfer_Out' ? 'Account Transfer (Out)' :
+                                 tx.type === 'Account_Transfer_In' ? 'Account Transfer (In)' :
+                                 tx.type}
+                              </span>
+                              {tx.tradingAccountName && (
+                                <p className="text-gray-500 text-xs">{tx.tradingAccountName}</p>
+                              )}
+                              {tx.type === 'Account_Transfer_Out' && tx.toTradingAccountName && (
+                                <p className="text-gray-500 text-xs">→ {tx.toTradingAccountName}</p>
+                              )}
+                              {tx.type === 'Account_Transfer_In' && tx.fromTradingAccountName && (
+                                <p className="text-gray-500 text-xs">← {tx.fromTradingAccountName}</p>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+                        <td className={`py-4 px-4 font-medium ${
+                          tx.type === 'Deposit' || tx.type === 'Transfer_From_Account' || tx.type === 'Account_Transfer_In' ? 'text-green-500' : 'text-red-500'
+                        }`}>
+                          {tx.type === 'Deposit' || tx.type === 'Transfer_From_Account' || tx.type === 'Account_Transfer_In' ? '+' : '-'}${tx.amount.toLocaleString()}
+                        </td>
+                        <td className="py-4 px-4 text-gray-400">
+                          {tx.type === 'Transfer_To_Account' || tx.type === 'Transfer_From_Account' || tx.type === 'Account_Transfer_Out' || tx.type === 'Account_Transfer_In' ? 'Internal' : tx.paymentMethod}
+                        </td>
+                        <td className="py-4 px-4">
+                          <div className="flex items-center gap-2">
+                            {getStatusIcon(tx.status)}
+                            <span className={`${
+                              tx.status === 'Approved' || tx.status === 'Completed' ? 'text-green-500' :
+                              tx.status === 'Rejected' ? 'text-red-500' :
+                              'text-yellow-500'
+                            }`}>
+                              {tx.status}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="py-4 px-4 text-gray-400 text-sm">{formatDate(tx.createdAt)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      </main>
+
+      {/* Deposit Modal */}
+      {showDepositModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className={`${isDarkMode ? 'bg-dark-800 border-gray-700' : 'bg-white border-gray-200'} rounded-xl p-4 sm:p-6 w-full max-w-lg border max-h-[90vh] overflow-y-auto`}>
+            <div className="flex items-center justify-between mb-6">
+              <h3 className={`${isDarkMode ? 'text-white' : 'text-gray-900'} font-semibold text-lg`}>Deposit Funds</h3>
+              <button 
+                onClick={() => {
+                  setShowDepositModal(false)
+                  setAmount('')
+                  setTransactionRef('')
+                  setSelectedPaymentMethod(null)
+                  setError('')
+                }}
+                className="text-gray-400 hover:text-white"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Deposit Method Selection - Bank or Crypto */}
+            {paymentGatewaySettings?.oxapayEnabled && (
+              <div className="mb-4">
+                <label className="block text-gray-500 text-sm mb-2">Deposit Method</label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    onClick={() => setShowCryptoDeposit(false)}
+                    className={`p-3 rounded-lg border transition-colors flex items-center justify-center gap-2 ${
+                      !showCryptoDeposit
+                        ? 'border-accent-green bg-accent-green/10 text-accent-green'
+                        : isDarkMode ? 'border-gray-700 text-gray-400 hover:border-gray-600' : 'border-gray-300 text-gray-600 hover:border-gray-400'
+                    }`}
+                  >
+                    <CreditCard size={18} />
+                    <span className="font-medium">Bank/UPI</span>
+                  </button>
+                  <button
+                    onClick={() => setShowCryptoDeposit(true)}
+                    className={`p-3 rounded-lg border transition-colors flex items-center justify-center gap-2 ${
+                      showCryptoDeposit
+                        ? 'border-orange-500 bg-orange-500/10 text-orange-500'
+                        : isDarkMode ? 'border-gray-700 text-gray-400 hover:border-gray-600' : 'border-gray-300 text-gray-600 hover:border-gray-400'
+                    }`}
+                  >
+                    <Wallet size={18} />
+                    <span className="font-medium">Crypto</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Crypto Deposit Section */}
+            {showCryptoDeposit && paymentGatewaySettings?.oxapayEnabled ? (
+              <div className="space-y-4">
+                <div className={`p-4 rounded-lg ${isDarkMode ? 'bg-orange-500/10 border-orange-500/30' : 'bg-orange-50 border-orange-200'} border`}>
+                  <p className={`text-sm ${isDarkMode ? 'text-orange-400' : 'text-orange-600'}`}>
+                    Pay with Bitcoin, Ethereum, USDT, and 100+ cryptocurrencies via OxaPay
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-gray-500 text-sm mb-2">Amount (USD)</label>
+                  <input
+                    type="number"
+                    value={cryptoAmount}
+                    onChange={(e) => setCryptoAmount(e.target.value)}
+                    placeholder="Minimum $10"
+                    min="10"
+                    className={`w-full ${isDarkMode ? 'bg-dark-700 border-gray-700 text-white' : 'bg-gray-100 border-gray-300 text-gray-900'} border rounded-lg px-4 py-3 placeholder-gray-500 focus:outline-none focus:border-orange-500`}
+                  />
+                </div>
+                {error && <p className="text-red-500 text-sm">{error}</p>}
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => {
+                      setShowDepositModal(false)
+                      setCryptoAmount('')
+                      setError('')
+                    }}
+                    className={`flex-1 py-3 rounded-lg font-medium ${isDarkMode ? 'bg-dark-700 text-white hover:bg-dark-600' : 'bg-gray-200 text-gray-800 hover:bg-gray-300'}`}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleCryptoDeposit}
+                    disabled={cryptoLoading || !cryptoAmount || parseFloat(cryptoAmount) < 10}
+                    className="flex-1 bg-orange-500 text-white font-medium py-3 rounded-lg hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    {cryptoLoading ? 'Processing...' : 'Pay with Crypto'}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+            <div className="mb-4">
+              <label className="block text-gray-500 text-sm mb-2">Amount ($ USD)</label>
+              <input
+                type="number"
+                value={localAmount}
+                onChange={(e) => setLocalAmount(e.target.value)}
+                placeholder="Enter amount in USD"
+                className={`w-full ${isDarkMode ? 'bg-dark-700 border-gray-700 text-white' : 'bg-gray-100 border-gray-300 text-gray-900'} border rounded-lg px-4 py-3 placeholder-gray-500 focus:outline-none focus:border-accent-green`}
+              />
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-gray-500 text-sm mb-2">Payment Method</label>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
+                {paymentMethods.map((method) => (
+                  <button
+                    key={method._id}
+                    onClick={() => setSelectedPaymentMethod(method)}
+                    className={`p-4 rounded-lg border transition-colors flex flex-col items-center gap-2 ${
+                      selectedPaymentMethod?._id === method._id
+                        ? 'border-accent-green bg-accent-green/10'
+                        : isDarkMode ? 'border-gray-700 bg-dark-700 hover:border-gray-600' : 'border-gray-300 bg-gray-100 hover:border-gray-400'
+                    }`}
+                  >
+                    {getPaymentIcon(method.type)}
+                    <span className={`${isDarkMode ? 'text-white' : 'text-gray-900'} text-sm`}>{method.type}</span>
+                  </button>
+                ))}
+              </div>
+              {paymentMethods.length === 0 && (
+                <p className="text-gray-500 text-sm text-center py-4">No payment methods available</p>
+              )}
+            </div>
+
+            {selectedPaymentMethod && (
+              <div className={`mb-4 p-4 ${isDarkMode ? 'bg-dark-700' : 'bg-gray-100'} rounded-lg`}>
+                {selectedPaymentMethod.type === 'Bank Transfer' && (
+                  <div className="space-y-2 text-sm">
+                    <p className="text-gray-500">Bank: <span className={isDarkMode ? 'text-white' : 'text-gray-900'}>{selectedPaymentMethod.bankName}</span></p>
+                    <p className="text-gray-500">Account: <span className={isDarkMode ? 'text-white' : 'text-gray-900'}>{selectedPaymentMethod.accountNumber}</span></p>
+                    <p className="text-gray-500">Name: <span className={isDarkMode ? 'text-white' : 'text-gray-900'}>{selectedPaymentMethod.accountHolderName}</span></p>
+                    <p className="text-gray-500">IFSC: <span className={isDarkMode ? 'text-white' : 'text-gray-900'}>{selectedPaymentMethod.ifscCode}</span></p>
+                  </div>
+                )}
+                {selectedPaymentMethod.type === 'UPI' && (
+                  <p className="text-gray-500">UPI ID: <span className={isDarkMode ? 'text-white' : 'text-gray-900'}>{selectedPaymentMethod.upiId}</span></p>
+                )}
+                {selectedPaymentMethod.type === 'QR Code' && selectedPaymentMethod.qrCodeImage && (
+                  <img src={selectedPaymentMethod.qrCodeImage} alt="QR Code" className="mx-auto max-w-48" />
+                )}
+              </div>
+            )}
+
+            <div className="mb-4">
+              <label className="block text-gray-500 text-sm mb-2">Transaction Reference ID <span className="text-red-500">*</span></label>
+              <input
+                type="text"
+                value={transactionRef}
+                onChange={(e) => setTransactionRef(e.target.value)}
+                placeholder="Enter transaction ID or reference"
+                className={`w-full ${isDarkMode ? 'bg-dark-700 border-gray-700 text-white' : 'bg-gray-100 border-gray-300 text-gray-900'} border rounded-lg px-4 py-3 placeholder-gray-500 focus:outline-none focus:border-accent-green`}
+              />
+            </div>
+
+            {/* Screenshot Upload */}
+            <div className="mb-6">
+              <label className="block text-gray-500 text-sm mb-2">Payment Screenshot <span className="text-red-500">*</span></label>
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleScreenshotChange}
+                accept="image/*"
+                className="hidden"
+              />
+              {screenshotPreview ? (
+                <div className="relative">
+                  <img 
+                    src={screenshotPreview} 
+                    alt="Payment Screenshot" 
+                    className="w-full max-h-48 object-contain rounded-lg border border-gray-700"
+                  />
+                  <button
+                    onClick={() => {
+                      setScreenshot(null)
+                      setScreenshotPreview(null)
+                      if (fileInputRef.current) fileInputRef.current.value = ''
+                    }}
+                    className="absolute top-2 right-2 p-1 bg-red-500 rounded-full text-white hover:bg-red-600"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-full p-4 border-2 border-dashed border-gray-700 rounded-lg hover:border-accent-green transition-colors flex flex-col items-center gap-2"
+                >
+                  <Upload size={24} className="text-gray-500" />
+                  <span className="text-gray-400 text-sm">Click to upload payment screenshot</span>
+                  <span className="text-gray-600 text-xs">PNG, JPG up to 5MB</span>
+                </button>
+              )}
+            </div>
+
+            {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowDepositModal(false)
+                  setAmount('')
+                  setLocalAmount('')
+                  setTransactionRef('')
+                  setSelectedPaymentMethod(null)
+                  setSelectedCurrency(null)
+                  setScreenshot(null)
+                  setScreenshotPreview(null)
+                  setError('')
+                }}
+                className={`flex-1 ${isDarkMode ? 'bg-dark-700 text-white hover:bg-dark-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'} py-3 rounded-lg transition-colors`}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeposit}
+                disabled={uploadingScreenshot}
+                className="flex-1 bg-accent-green text-black font-medium py-3 rounded-lg hover:bg-accent-green/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {uploadingScreenshot ? (
+                  <>
+                    <RefreshCw size={16} className="animate-spin" /> Submitting...
+                  </>
+                ) : (
+                  'Submit Deposit'
+                )}
+              </button>
+            </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Withdraw Modal */}
+      {showWithdrawModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className={`${isDarkMode ? 'bg-dark-800 border-gray-700' : 'bg-white border-gray-200'} rounded-xl p-4 sm:p-6 w-full max-w-lg border max-h-[90vh] overflow-y-auto`}>
+            <div className="flex items-center justify-between mb-6">
+              <h3 className={`${isDarkMode ? 'text-white' : 'text-gray-900'} font-semibold text-lg`}>Withdraw Funds</h3>
+              <button 
+                onClick={() => {
+                  setShowWithdrawModal(false)
+                  setAmount('')
+                  setSelectedBankAccount(null)
+                  setError('')
+                }}
+                className="text-gray-400 hover:text-white"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className={`mb-4 p-3 ${isDarkMode ? 'bg-dark-700' : 'bg-gray-100'} rounded-lg`}>
+              <p className="text-gray-500 text-sm">Available Balance</p>
+              <p className={`${isDarkMode ? 'text-white' : 'text-gray-900'} text-xl font-bold`}>${wallet?.balance?.toLocaleString() || '0.00'}</p>
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-gray-500 text-sm mb-2">Amount (USD)</label>
+              <input
+                type="number"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                placeholder="Enter amount"
+                className={`w-full ${isDarkMode ? 'bg-dark-700 border-gray-700 text-white' : 'bg-gray-100 border-gray-300 text-gray-900'} border rounded-lg px-4 py-3 placeholder-gray-500 focus:outline-none focus:border-accent-green`}
+              />
+            </div>
+
+            <div className="mb-6">
+              <label className="block text-gray-500 text-sm mb-2">Select Bank Account</label>
+              {userBankAccounts.filter(acc => acc.status === 'APPROVED').length === 0 ? (
+                <div className={`p-4 rounded-lg border ${isDarkMode ? 'border-yellow-500/30 bg-yellow-500/10' : 'border-yellow-400 bg-yellow-50'}`}>
+                  <p className={`text-sm ${isDarkMode ? 'text-yellow-400' : 'text-yellow-700'}`}>
+                    No approved bank accounts found. Please add a bank account in your Profile page first.
+                  </p>
+                  <button
+                    onClick={() => {
+                      setShowWithdrawModal(false)
+                      navigate('/profile')
+                    }}
+                    className="mt-2 text-sm text-accent-green hover:underline"
+                  >
+                    Go to Profile →
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {userBankAccounts.filter(acc => acc.status === 'APPROVED').map((account) => (
+                    <button
+                      key={account._id}
+                      onClick={() => setSelectedBankAccount(account)}
+                      className={`w-full p-4 rounded-lg border transition-colors text-left ${
+                        selectedBankAccount?._id === account._id
+                          ? 'border-accent-green bg-accent-green/10'
+                          : isDarkMode ? 'border-gray-700 bg-dark-700 hover:border-gray-600' : 'border-gray-300 bg-gray-100 hover:border-gray-400'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isDarkMode ? 'bg-dark-600' : 'bg-gray-200'}`}>
+                          {account.type === 'UPI' ? <Smartphone size={18} className="text-purple-500" /> : <Building size={18} className="text-green-500" />}
+                        </div>
+                        <div className="flex-1">
+                          <p className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                            {account.type === 'UPI' ? account.upiId : account.bankName}
+                          </p>
+                          <p className="text-gray-500 text-sm">
+                            {account.type === 'UPI' 
+                              ? 'UPI Transfer' 
+                              : `A/C: ****${account.accountNumber?.slice(-4) || ''} • ${account.ifscCode || ''}`
+                            }
+                          </p>
+                        </div>
+                        {selectedBankAccount?._id === account._id && (
+                          <Check size={20} className="text-accent-green" />
+                        )}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowWithdrawModal(false)
+                  setAmount('')
+                  setSelectedBankAccount(null)
+                  setError('')
+                }}
+                className={`flex-1 ${isDarkMode ? 'bg-dark-700 text-white hover:bg-dark-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'} py-3 rounded-lg transition-colors`}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleWithdraw}
+                disabled={userBankAccounts.filter(acc => acc.status === 'APPROVED').length === 0}
+                className="flex-1 bg-accent-green text-black font-medium py-3 rounded-lg hover:bg-accent-green/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Submit Withdrawal
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* No Bank Account Warning Modal */}
+      {showNoBankWarning && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className={`${isDarkMode ? 'bg-dark-800 border-gray-700' : 'bg-white border-gray-200'} rounded-xl p-6 w-full max-w-md border`}>
+            <div className="text-center">
+              <div className="w-16 h-16 bg-orange-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Building size={32} className="text-orange-500" />
+              </div>
+              <h3 className={`text-xl font-bold mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Bank Account Required</h3>
+              <p className={`mb-4 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                You need to add and get a bank account approved before making withdrawals. Please add your bank details in the Profile page.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowNoBankWarning(false)}
+                  className={`flex-1 py-3 rounded-lg ${isDarkMode ? 'bg-dark-700 text-white hover:bg-dark-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    setShowNoBankWarning(false)
+                    navigate('/profile')
+                  }}
+                  className="flex-1 bg-accent-green text-black font-medium py-3 rounded-lg hover:bg-accent-green/90"
+                >
+                  Add Bank Account
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* KYC Warning Modal */}
+      {showKycWarning && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className={`${isDarkMode ? 'bg-dark-800 border-gray-700' : 'bg-white border-gray-200'} rounded-xl p-6 w-full max-w-md border`}>
+            <div className="text-center">
+              <div className="w-16 h-16 bg-yellow-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                <XCircle size={32} className="text-yellow-500" />
+              </div>
+              <h3 className={`text-xl font-bold mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>KYC Required</h3>
+              <p className={`mb-4 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                {!kycStatus 
+                  ? 'You need to complete KYC verification before making withdrawals.'
+                  : kycStatus.status?.toUpperCase() === 'PENDING'
+                    ? 'Your KYC is pending approval. Please wait for verification.'
+                    : kycStatus.status?.toUpperCase() === 'REJECTED'
+                      ? 'Your KYC was rejected. Please resubmit with valid documents.'
+                      : 'Please complete your KYC verification to proceed.'}
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowKycWarning(false)}
+                  className={`flex-1 py-3 rounded-lg ${isDarkMode ? 'bg-dark-700 text-white hover:bg-dark-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    setShowKycWarning(false)
+                    navigate('/profile')
+                  }}
+                  className="flex-1 bg-accent-green text-black font-medium py-3 rounded-lg hover:bg-accent-green/90"
+                >
+                  Complete KYC
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+export default WalletPage

@@ -1,0 +1,1831 @@
+import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { 
+  LayoutDashboard, User, Wallet, Users, Copy, UserCircle, HelpCircle, FileText, LogOut,
+  TrendingUp, Star, UserPlus, Pause, Play, X, Search, Filter, ChevronRight, Trophy, Crown, DollarSign,
+  ArrowLeft, Home, Sun, Moon, Download, Calendar, BarChart3
+} from 'lucide-react'
+import { useTheme } from '../context/ThemeContext'
+import logo from '../assets/logo.png'
+
+import { API_URL } from '../config/api'
+
+const CopyTradePage = () => {
+  const navigate = useNavigate()
+  const { isDarkMode, toggleDarkMode } = useTheme()
+  const [sidebarExpanded, setSidebarExpanded] = useState(false)
+  const [activeTab, setActiveTab] = useState('discover')
+  const [masters, setMasters] = useState([])
+  const [mySubscriptions, setMySubscriptions] = useState([])
+  const [myCopyTrades, setMyCopyTrades] = useState([])
+  const [myFollowers, setMyFollowers] = useState([])
+  const [myCommissions, setMyCommissions] = useState([])
+  const [commissionTotals, setCommissionTotals] = useState(null)
+  const [masterStats, setMasterStats] = useState(null)
+  const [userSummary, setUserSummary] = useState([])
+  const [summaryTotals, setSummaryTotals] = useState(null)
+  const [commissionView, setCommissionView] = useState('history') // 'history' or 'summary'
+  const [dateFilter, setDateFilter] = useState({ startDate: '', endDate: '' })
+  const [loading, setLoading] = useState(true)
+  const [showFollowModal, setShowFollowModal] = useState(false)
+  const [selectedMaster, setSelectedMaster] = useState(null)
+  const [copyMode, setCopyMode] = useState('EQUITY_BASED')
+  const [copyValue, setCopyValue] = useState('1')
+  const [depositAmount, setDepositAmount] = useState('')
+  const [accounts, setAccounts] = useState([])
+  const [useExistingAccount, setUseExistingAccount] = useState(false)
+  const [selectedExistingAccount, setSelectedExistingAccount] = useState('')
+  const [selectedAccount, setSelectedAccount] = useState('')
+  const [searchTerm, setSearchTerm] = useState('')
+  const [walletBalance, setWalletBalance] = useState(0)
+  const [challengeModeEnabled, setChallengeModeEnabled] = useState(false)
+  
+  // Master trader states
+  const [myMasterProfile, setMyMasterProfile] = useState(null)
+  const [showMasterModal, setShowMasterModal] = useState(false)
+  const [masterForm, setMasterForm] = useState({
+    displayName: '',
+    description: '',
+    tradingAccountId: '',
+    minimumFollowerDeposit: 0
+  })
+  const [applyingMaster, setApplyingMaster] = useState(false)
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
+  
+  // Edit subscription states
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [editingSubscription, setEditingSubscription] = useState(null)
+  const [editAccount, setEditAccount] = useState('')
+  const [editCopyMode, setEditCopyMode] = useState('EQUITY_BASED')
+  const [editCopyValue, setEditCopyValue] = useState('1')
+  
+  // Refill/Deposit modal states
+  const [showRefillModal, setShowRefillModal] = useState(false)
+  const [refillSubscription, setRefillSubscription] = useState(null)
+  const [refillAmount, setRefillAmount] = useState('')
+  const [refillInfo, setRefillInfo] = useState(null)
+  const [refillLoading, setRefillLoading] = useState(false)
+  const [refillProcessing, setRefillProcessing] = useState(false)
+
+  const user = JSON.parse(localStorage.getItem('user') || '{}')
+
+  const menuItems = [
+    { name: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
+    { name: 'Account', icon: User, path: '/account' },
+    { name: 'Wallet', icon: Wallet, path: '/wallet' },
+    { name: 'Orders', icon: FileText, path: '/orders' },
+    { name: 'IB', icon: Users, path: '/ib' },
+    { name: 'Copytrade', icon: Copy, path: '/copytrade' },
+    { name: 'Profile', icon: UserCircle, path: '/profile' },
+    { name: 'Support', icon: HelpCircle, path: '/support' },
+    { name: 'Instructions', icon: FileText, path: '/instructions' },
+  ]
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768)
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
+  useEffect(() => {
+    fetchChallengeStatus()
+    fetchMasters()
+    fetchMySubscriptions()
+    fetchMyCopyTrades()
+    fetchAccounts()
+    fetchMyMasterProfile()
+    fetchWalletBalance()
+  }, [])
+
+  // Fetch my followers and commissions when master profile is loaded
+  useEffect(() => {
+    if (myMasterProfile?._id) {
+      fetchMyFollowers()
+      fetchMyCommissions()
+    }
+  }, [myMasterProfile])
+
+  const fetchMyFollowers = async () => {
+    if (!myMasterProfile?._id) return
+    try {
+      const res = await fetch(`${API_URL}/copy/my-followers/${myMasterProfile._id}`)
+      const data = await res.json()
+      setMyFollowers(data.followers || [])
+    } catch (error) {
+      console.error('Error fetching my followers:', error)
+    }
+  }
+
+  const fetchMyCommissions = async () => {
+    if (!myMasterProfile?._id) return
+    try {
+      let url = `${API_URL}/copy/master/commissions/${myMasterProfile._id}`
+      const params = new URLSearchParams()
+      if (dateFilter.startDate) params.append('startDate', dateFilter.startDate)
+      if (dateFilter.endDate) params.append('endDate', dateFilter.endDate)
+      if (params.toString()) url += `?${params.toString()}`
+      
+      const res = await fetch(url)
+      const data = await res.json()
+      if (data.success) {
+        setMyCommissions(data.commissions || [])
+        setCommissionTotals(data.totals)
+        setMasterStats(data.masterStats)
+      }
+    } catch (error) {
+      console.error('Error fetching commissions:', error)
+    }
+  }
+
+  const fetchUserSummary = async () => {
+    if (!myMasterProfile?._id) return
+    try {
+      let url = `${API_URL}/copy/master/commissions/${myMasterProfile._id}/summary`
+      const params = new URLSearchParams()
+      if (dateFilter.startDate) params.append('startDate', dateFilter.startDate)
+      if (dateFilter.endDate) params.append('endDate', dateFilter.endDate)
+      if (params.toString()) url += `?${params.toString()}`
+      
+      const res = await fetch(url)
+      const data = await res.json()
+      if (data.success) {
+        setUserSummary(data.userSummary || [])
+        setSummaryTotals(data.totals)
+      }
+    } catch (error) {
+      console.error('Error fetching user summary:', error)
+    }
+  }
+
+  const handleExportCSV = () => {
+    if (!myMasterProfile?._id) return
+    let url = `${API_URL}/copy/master/commissions/${myMasterProfile._id}/export`
+    const params = new URLSearchParams()
+    if (dateFilter.startDate) params.append('startDate', dateFilter.startDate)
+    if (dateFilter.endDate) params.append('endDate', dateFilter.endDate)
+    if (params.toString()) url += `?${params.toString()}`
+    window.open(url, '_blank')
+  }
+
+  const applyDateFilter = () => {
+    fetchMyCommissions()
+    fetchUserSummary()
+  }
+
+  const handleWithdrawCommission = async () => {
+    if (!myMasterProfile?._id || !masterStats?.pendingCommission) return
+    
+    const amount = masterStats.pendingCommission
+    if (amount < 10) {
+      alert('Minimum withdrawal amount is $10')
+      return
+    }
+    
+    if (!confirm(`Withdraw $${amount.toFixed(2)} commission to your wallet?`)) return
+    
+    try {
+      const res = await fetch(`${API_URL}/copy/master/withdraw`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          masterId: myMasterProfile._id,
+          amount
+        })
+      })
+      const data = await res.json()
+      if (data.message) {
+        alert('Commission withdrawn successfully!')
+        fetchMyCommissions()
+        fetchMyMasterProfile()
+      } else {
+        alert(data.message || 'Failed to withdraw')
+      }
+    } catch (error) {
+      console.error('Error withdrawing:', error)
+      alert('Failed to withdraw commission')
+    }
+  }
+
+  const fetchChallengeStatus = async () => {
+    try {
+      const res = await fetch(`${API_URL}/prop/status`)
+      const data = await res.json()
+      if (data.success) setChallengeModeEnabled(data.enabled)
+    } catch (error) {
+      console.error('Error:', error)
+    }
+  }
+
+  const fetchMasters = async () => {
+    try {
+      const res = await fetch(`${API_URL}/copy/masters`)
+      const data = await res.json()
+      setMasters(data.masters || [])
+    } catch (error) {
+      console.error('Error fetching masters:', error)
+    }
+    setLoading(false)
+  }
+
+  const fetchMySubscriptions = async () => {
+    try {
+      const res = await fetch(`${API_URL}/copy/my-subscriptions/${user._id}`)
+      const data = await res.json()
+      setMySubscriptions(data.subscriptions || [])
+    } catch (error) {
+      console.error('Error fetching subscriptions:', error)
+    }
+  }
+
+  const fetchMyCopyTrades = async () => {
+    try {
+      const res = await fetch(`${API_URL}/copy/my-copy-trades/${user._id}?limit=50`)
+      const data = await res.json()
+      setMyCopyTrades(data.copyTrades || [])
+    } catch (error) {
+      console.error('Error fetching copy trades:', error)
+    }
+  }
+
+  const fetchAccounts = async () => {
+    try {
+      const res = await fetch(`${API_URL}/trading-accounts/user/${user._id}`)
+      const data = await res.json()
+      setAccounts(data.accounts || [])
+      if (data.accounts?.length > 0) {
+        setSelectedAccount(data.accounts[0]._id)
+        setMasterForm(prev => ({ ...prev, tradingAccountId: data.accounts[0]._id }))
+      }
+    } catch (error) {
+      console.error('Error fetching accounts:', error)
+    }
+  }
+
+  const fetchWalletBalance = async () => {
+    try {
+      const res = await fetch(`${API_URL}/wallet/${user._id}`)
+      const data = await res.json()
+      setWalletBalance(data.wallet?.balance || 0)
+    } catch (error) {
+      console.error('Error fetching wallet balance:', error)
+    }
+  }
+
+  const fetchMyMasterProfile = async () => {
+    try {
+      const res = await fetch(`${API_URL}/copy/master/my-profile/${user._id}`)
+      const data = await res.json()
+      if (data.master) {
+        setMyMasterProfile(data.master)
+      }
+    } catch (error) {
+      // User is not a master - that's okay
+      console.log('No master profile found')
+    }
+  }
+
+  const handleApplyMaster = async () => {
+    // Get REGULAR accounts only (not Copy Trading, not Demo)
+    const regularAccounts = accounts.filter(a => !a.isCopyTrading && !a.isDemo && !a.accountTypeId?.isDemo)
+    const accountId = masterForm.tradingAccountId || (regularAccounts.length > 0 ? regularAccounts[0]._id : '')
+    
+    if (!masterForm.displayName.trim()) {
+      alert('Please enter a display name')
+      return
+    }
+    if (!accountId) {
+      alert('Please select a trading account. You need a regular trading account to become a master.')
+      return
+    }
+    
+    // Verify selected account is NOT a Copy Trading account
+    const selectedAccount = accounts.find(a => a._id === accountId)
+    if (selectedAccount?.isCopyTrading) {
+      alert('Master cannot use a Copy Trading account. Please select a regular trading account.')
+      return
+    }
+    
+    // Update form with selected account if not set
+    const formData = {
+      ...masterForm,
+      tradingAccountId: accountId
+    }
+
+    setApplyingMaster(true)
+    try {
+      const res = await fetch(`${API_URL}/copy/master/apply`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user._id,
+          ...formData
+        })
+      })
+
+      const data = await res.json()
+      if (data.master) {
+        alert('Application submitted successfully! Please wait for admin approval.')
+        setShowMasterModal(false)
+        fetchMyMasterProfile()
+      } else {
+        alert(data.message || 'Failed to submit application')
+      }
+    } catch (error) {
+      console.error('Error applying as master:', error)
+      alert('Failed to submit application')
+    }
+    setApplyingMaster(false)
+  }
+
+  const handleFollow = async () => {
+    if (!selectedMaster) return
+
+    const deposit = parseFloat(depositAmount) || 0
+    const minDeposit = selectedMaster.minimumFollowerDeposit || 0
+
+    if (deposit < minDeposit) {
+      alert(`Minimum deposit of $${minDeposit} required to follow this master`)
+      return
+    }
+
+    if (deposit > walletBalance) {
+      alert(`Insufficient wallet balance. You have $${walletBalance}, need $${deposit}`)
+      return
+    }
+
+    try {
+      const requestBody = {
+        followerUserId: user._id,
+        masterId: selectedMaster._id,
+        depositAmount: deposit,
+        copyMode,
+        copyValue: parseFloat(copyValue)
+      }
+      
+      // Add existing account ID if user selected one
+      if (useExistingAccount && selectedExistingAccount) {
+        requestBody.existingAccountId = selectedExistingAccount
+      }
+
+      const res = await fetch(`${API_URL}/copy/follow`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody)
+      })
+
+      const data = await res.json()
+      if (data.success) {
+        const message = useExistingAccount 
+          ? `Successfully following ${selectedMaster.displayName}! $${deposit} credit added to your existing account.`
+          : `Successfully following ${selectedMaster.displayName}! A copy trading account has been created with $${deposit} credit.`
+        alert(message)
+        setShowFollowModal(false)
+        setDepositAmount('')
+        setUseExistingAccount(false)
+        setSelectedExistingAccount('')
+        fetchMySubscriptions()
+        fetchWalletBalance()
+        fetchAccounts()
+      } else {
+        if (data.code === 'INSUFFICIENT_WALLET') {
+          alert(`Insufficient wallet balance. You have $${data.current}, need $${data.required}`)
+        } else if (data.code === 'INSUFFICIENT_DEPOSIT') {
+          alert(`Minimum deposit of $${data.required} required. You entered $${data.provided}`)
+        } else {
+          alert(data.message || 'Failed to follow')
+        }
+      }
+    } catch (error) {
+      console.error('Error following master:', error)
+      alert('Failed to follow master')
+    }
+  }
+
+  const handlePauseResume = async (subscriptionId, currentStatus) => {
+    const action = currentStatus === 'ACTIVE' ? 'pause' : 'resume'
+    try {
+      const res = await fetch(`${API_URL}/copy/follow/${subscriptionId}/${action}`, {
+        method: 'PUT'
+      })
+      const data = await res.json()
+      if (data.follower) {
+        fetchMySubscriptions()
+      }
+    } catch (error) {
+      console.error('Error updating subscription:', error)
+    }
+  }
+
+  const handleStop = async (subscriptionId) => {
+    if (!confirm('Are you sure you want to stop following this master?')) return
+
+    try {
+      const res = await fetch(`${API_URL}/copy/follow/${subscriptionId}/stop`, {
+        method: 'PUT'
+      })
+      const data = await res.json()
+      if (data.follower) {
+        fetchMySubscriptions()
+      }
+    } catch (error) {
+      console.error('Error stopping subscription:', error)
+    }
+  }
+
+  const handleEditSubscription = (sub) => {
+    setEditingSubscription(sub)
+    setEditAccount(sub.followerAccountId?._id || sub.followerAccountId || '')
+    setEditCopyMode(sub.copyMode || 'FIXED_LOT')
+    setEditCopyValue(sub.copyValue?.toString() || '0.01')
+    setShowEditModal(true)
+  }
+
+  const handleSaveSubscription = async () => {
+    if (!editingSubscription) return
+
+    try {
+      const res = await fetch(`${API_URL}/copy/follow/${editingSubscription._id}/update`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          followerAccountId: editAccount,
+          copyMode: editCopyMode,
+          copyValue: parseFloat(editCopyValue)
+        })
+      })
+      const data = await res.json()
+      if (data.success || data.follower) {
+        alert('Subscription updated successfully!')
+        setShowEditModal(false)
+        setEditingSubscription(null)
+        fetchMySubscriptions()
+      } else {
+        alert(data.message || 'Failed to update subscription')
+      }
+    } catch (error) {
+      console.error('Error updating subscription:', error)
+      alert('Failed to update subscription')
+    }
+  }
+
+  const handleUnfollow = async (subscriptionId) => {
+    if (!confirm('Are you sure you want to unfollow this master? This will stop all future copy trades.')) return
+
+    try {
+      const res = await fetch(`${API_URL}/copy/follow/${subscriptionId}/unfollow`, {
+        method: 'DELETE'
+      })
+      const data = await res.json()
+      if (data.success) {
+        alert('Successfully unfollowed master')
+        fetchMySubscriptions()
+      } else {
+        alert(data.message || 'Failed to unfollow')
+      }
+    } catch (error) {
+      console.error('Error unfollowing:', error)
+      alert('Failed to unfollow master')
+    }
+  }
+
+  const handleOpenRefillModal = async (subscription) => {
+    setRefillSubscription(subscription)
+    setRefillAmount('')
+    setRefillInfo(null)
+    setShowRefillModal(true)
+    setRefillLoading(true)
+    
+    try {
+      const res = await fetch(`${API_URL}/copy/refill-info/${subscription._id}?userId=${user._id}`)
+      const data = await res.json()
+      if (data.success) {
+        setRefillInfo(data.data)
+      } else {
+        alert(data.message || 'Failed to fetch balance info')
+        setShowRefillModal(false)
+      }
+    } catch (error) {
+      console.error('Error fetching refill info:', error)
+      alert('Failed to fetch balance info')
+      setShowRefillModal(false)
+    }
+    setRefillLoading(false)
+  }
+
+  const handleRefillDeposit = async () => {
+    if (!refillSubscription || !refillAmount) return
+    
+    const amount = parseFloat(refillAmount)
+    if (isNaN(amount) || amount <= 0) {
+      alert('Please enter a valid amount')
+      return
+    }
+    
+    if (refillInfo && amount > refillInfo.walletBalance) {
+      alert(`Insufficient wallet balance. Available: $${refillInfo.walletBalance.toFixed(2)}`)
+      return
+    }
+    
+    if (!confirm(`Deposit $${amount.toFixed(2)} from your wallet to copy trading account?`)) return
+    
+    setRefillProcessing(true)
+    try {
+      const res = await fetch(`${API_URL}/copy/refill`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user._id,
+          subscriptionId: refillSubscription._id,
+          amount
+        })
+      })
+      const data = await res.json()
+      
+      if (data.success) {
+        alert(`Successfully deposited $${amount.toFixed(2)} to your copy trading account!`)
+        setShowRefillModal(false)
+        setRefillSubscription(null)
+        setRefillAmount('')
+        setRefillInfo(null)
+        fetchMySubscriptions()
+        fetchWalletBalance()
+      } else {
+        alert(data.message || 'Failed to process deposit')
+      }
+    } catch (error) {
+      console.error('Error processing refill:', error)
+      alert('Failed to process deposit')
+    }
+    setRefillProcessing(false)
+  }
+
+  const handleLogout = () => {
+    localStorage.removeItem('token')
+    localStorage.removeItem('user')
+    navigate('/user/login')
+  }
+
+  const filteredMasters = masters.filter(m => 
+    m.displayName?.toLowerCase().includes(searchTerm.toLowerCase())
+  )
+
+  return (
+    <div className={`min-h-screen flex flex-col md:flex-row transition-colors duration-300 ${isDarkMode ? 'bg-dark-900' : 'bg-gray-100'}`}>
+      {/* Mobile Header */}
+      {isMobile && (
+        <header className={`fixed top-0 left-0 right-0 z-40 px-4 py-3 flex items-center gap-4 ${isDarkMode ? 'bg-dark-800 border-b border-gray-800' : 'bg-white border-b border-gray-200'}`}>
+          <button onClick={() => navigate('/mobile')} className={`p-2 -ml-2 rounded-lg ${isDarkMode ? 'hover:bg-dark-700' : 'hover:bg-gray-100'}`}>
+            <ArrowLeft size={22} className={isDarkMode ? 'text-white' : 'text-gray-900'} />
+          </button>
+          <h1 className={`font-semibold text-lg flex-1 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Copy Trading</h1>
+          <button onClick={toggleDarkMode} className={`p-2 rounded-lg ${isDarkMode ? 'text-yellow-400 hover:bg-dark-700' : 'text-blue-500 hover:bg-gray-100'}`}>
+            {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
+          </button>
+          <button onClick={() => navigate('/mobile')} className={`p-2 rounded-lg ${isDarkMode ? 'hover:bg-dark-700' : 'hover:bg-gray-100'}`}>
+            <Home size={20} className="text-gray-400" />
+          </button>
+        </header>
+      )}
+
+      {/* Sidebar - Hidden on Mobile */}
+      {!isMobile && (
+        <aside 
+          className={`${sidebarExpanded ? 'w-48' : 'w-16'} ${isDarkMode ? 'bg-dark-900 border-gray-800' : 'bg-white border-gray-200'} border-r flex flex-col transition-all duration-300`}
+          onMouseEnter={() => setSidebarExpanded(true)}
+          onMouseLeave={() => setSidebarExpanded(false)}
+        >
+          <div className="p-4 flex items-center justify-center">
+            <img src={logo} alt="ProfitVisionFX" className="h-12 object-contain" />
+          </div>
+          <nav className="flex-1 px-2">
+            {menuItems.map((item) => (
+              <button
+                key={item.name}
+                onClick={() => navigate(item.path)}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg mb-1 transition-colors ${
+                  item.name === 'Copytrade' ? 'bg-accent-green text-black' : isDarkMode ? 'text-gray-400 hover:text-white hover:bg-dark-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                }`}
+              >
+                <item.icon size={18} className="flex-shrink-0" />
+                {sidebarExpanded && <span className="text-sm font-medium">{item.name}</span>}
+              </button>
+            ))}
+          </nav>
+          <div className={`p-2 border-t ${isDarkMode ? 'border-gray-800' : 'border-gray-200'}`}>
+            <button onClick={toggleDarkMode} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg mb-1 ${isDarkMode ? 'text-yellow-400 hover:bg-dark-700' : 'text-blue-500 hover:bg-gray-100'}`}>
+              {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
+              {sidebarExpanded && <span className="text-sm">{isDarkMode ? 'Light Mode' : 'Dark Mode'}</span>}
+            </button>
+            <button onClick={handleLogout} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg ${isDarkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900'}`}>
+              <LogOut size={18} />
+              {sidebarExpanded && <span className="text-sm">Log Out</span>}
+            </button>
+          </div>
+        </aside>
+      )}
+
+      {/* Main Content */}
+      <main className={`flex-1 overflow-auto ${isMobile ? 'pt-14' : ''}`}>
+        {!isMobile && (
+          <header className={`flex items-center justify-between px-6 py-4 border-b ${isDarkMode ? 'border-gray-800' : 'border-gray-200'}`}>
+            <h1 className={`text-xl font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Copy Trading</h1>
+          </header>
+        )}
+
+        <div className={`${isMobile ? 'p-4' : 'p-6'}`}>
+          {/* Become a Master Banner */}
+          {!myMasterProfile && (
+            <div className={`bg-gradient-to-r from-yellow-500/20 to-orange-500/20 rounded-xl ${isMobile ? 'p-4' : 'p-5'} border border-yellow-500/30 mb-4`}>
+              <div className={`${isMobile ? 'flex flex-col gap-3' : 'flex items-center justify-between'}`}>
+                <div className="flex items-center gap-3">
+                  <div className={`${isMobile ? 'w-10 h-10' : 'w-12 h-12'} bg-yellow-500/20 rounded-full flex items-center justify-center`}>
+                    <Crown size={isMobile ? 20 : 24} className="text-yellow-500" />
+                  </div>
+                  <div>
+                    <h3 className={`${isDarkMode ? 'text-white' : 'text-gray-900'} font-semibold ${isMobile ? 'text-sm' : ''}`}>Become a Master Trader</h3>
+                    <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-600'} text-xs`}>Share your trades and earn commission</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowMasterModal(true)}
+                  className={`bg-yellow-500 text-black ${isMobile ? 'px-4 py-2 text-sm w-full' : 'px-6 py-2'} rounded-lg font-medium hover:bg-yellow-400 flex items-center justify-center gap-2`}
+                >
+                  <Crown size={16} />
+                  Apply Now
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Master Status Banner */}
+          {myMasterProfile && (
+            <div className={`rounded-xl ${isMobile ? 'p-4' : 'p-5'} border mb-4 ${
+              myMasterProfile.status === 'ACTIVE' ? 'bg-green-500/10 border-green-500/30' :
+              myMasterProfile.status === 'PENDING' ? 'bg-yellow-500/10 border-yellow-500/30' :
+              myMasterProfile.status === 'REJECTED' ? 'bg-red-500/10 border-red-500/30' :
+              'bg-gray-500/10 border-gray-500/30'
+            }`}>
+              <div className={`${isMobile ? 'flex flex-col gap-3' : 'flex items-center justify-between'}`}>
+                <div className="flex items-center gap-3">
+                  <div className={`${isMobile ? 'w-10 h-10' : 'w-12 h-12'} rounded-full flex items-center justify-center ${
+                    myMasterProfile.status === 'ACTIVE' ? 'bg-green-500/20' :
+                    myMasterProfile.status === 'PENDING' ? 'bg-yellow-500/20' : 'bg-red-500/20'
+                  }`}>
+                    <Crown size={isMobile ? 20 : 24} className={
+                      myMasterProfile.status === 'ACTIVE' ? 'text-green-500' :
+                      myMasterProfile.status === 'PENDING' ? 'text-yellow-500' : 'text-red-500'
+                    } />
+                  </div>
+                  <div>
+                    <h3 className={`text-white font-semibold ${isMobile ? 'text-sm' : ''}`}>{myMasterProfile.displayName}</h3>
+                    <p className="text-gray-400 text-xs">
+                      <span className={
+                        myMasterProfile.status === 'ACTIVE' ? 'text-green-500' :
+                        myMasterProfile.status === 'PENDING' ? 'text-yellow-500' : 'text-red-500'
+                      }>{myMasterProfile.status}</span>
+                      {myMasterProfile.status === 'ACTIVE' && ` • ${myMasterProfile.stats?.activeFollowers || 0} followers`}
+                    </p>
+                  </div>
+                </div>
+                {myMasterProfile.status === 'ACTIVE' && (
+                  <div className={isMobile ? '' : 'text-right'}>
+                    <p className="text-gray-400 text-xs">Commission: <span className="text-green-400 font-semibold">50%</span> (fixed)</p>
+                  </div>
+                )}
+              </div>
+              {myMasterProfile.status === 'REJECTED' && myMasterProfile.rejectionReason && (
+                <p className="text-red-400 text-xs mt-2">Reason: {myMasterProfile.rejectionReason}</p>
+              )}
+            </div>
+          )}
+
+          {/* Tabs - Scrollable on mobile */}
+          <div className={`flex ${isMobile ? 'gap-2 overflow-x-auto pb-2' : 'gap-4'} mb-4`}>
+            {['discover', 'subscriptions', 'trades', ...(myMasterProfile?.status === 'ACTIVE' ? ['my-followers', 'commissions'] : [])].map(tab => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`${isMobile ? 'px-3 py-1.5 text-xs whitespace-nowrap' : 'px-4 py-2'} rounded-lg font-medium transition-colors ${
+                  activeTab === tab ? 'bg-accent-green text-black' : isDarkMode ? 'bg-dark-800 text-gray-400 hover:text-white' : 'bg-white text-gray-600 hover:text-gray-900 border border-gray-200'
+                }`}
+              >
+                {tab === 'discover' ? 'Discover' : 
+                 tab === 'subscriptions' ? 'Subscriptions' : 
+                 tab === 'trades' ? 'Trades' : 
+                 tab === 'my-followers' ? 'Followers' : 'Commissions'}
+              </button>
+            ))}
+          </div>
+
+          {/* Discover Masters */}
+          {activeTab === 'discover' && (
+            <div>
+              <div className={`flex ${isMobile ? 'gap-2' : 'gap-4'} mb-4`}>
+                <div className="flex-1 relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={16} />
+                  <input
+                    type="text"
+                    placeholder="Search masters..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className={`w-full rounded-lg pl-9 pr-3 ${isMobile ? 'py-2 text-sm' : 'py-2'} ${isDarkMode ? 'bg-dark-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'} border`}
+                  />
+                </div>
+              </div>
+
+              {loading ? (
+                <div className="text-center py-12 text-gray-500">Loading masters...</div>
+              ) : filteredMasters.length === 0 ? (
+                <div className="text-center py-12">
+                  <Copy size={48} className="mx-auto text-gray-600 mb-4" />
+                  <p className="text-gray-500">No master traders available yet</p>
+                  <p className="text-gray-600 text-sm mt-2">Check back later for trading experts to follow</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {filteredMasters.map(master => {
+                    const isFollowing = mySubscriptions.some(sub => sub.masterId?._id === master._id || sub.masterId === master._id)
+                    return (
+                      <div key={master._id} className={`${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'} rounded-xl p-5 border`}>
+                        <div className="flex items-center gap-3 mb-4">
+                          <div className="w-12 h-12 bg-accent-green/20 rounded-full flex items-center justify-center">
+                            <span className="text-accent-green font-bold">{master.displayName?.charAt(0)}</span>
+                          </div>
+                          <div className="flex-1">
+                            <h3 className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{master.displayName}</h3>
+                            <p className="text-gray-500 text-sm">{master.stats?.activeFollowers || 0} followers</p>
+                          </div>
+                          {isFollowing && (
+                            <span className="px-2 py-1 bg-green-500/20 text-green-500 text-xs rounded-full font-medium">
+                              Following
+                            </span>
+                          )}
+                        </div>
+                        <div className="grid grid-cols-2 gap-3 mb-4">
+                          <div className={`${isDarkMode ? 'bg-dark-700' : 'bg-gray-50'} rounded-lg p-3`}>
+                            <p className="text-gray-500 text-xs">Win Rate</p>
+                            <p className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{master.stats?.winRate?.toFixed(1) || 0}%</p>
+                          </div>
+                          <div className={`${isDarkMode ? 'bg-dark-700' : 'bg-gray-50'} rounded-lg p-3`}>
+                            <p className="text-gray-500 text-xs">Total Trades</p>
+                            <p className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{master.stats?.totalTrades || 0}</p>
+                          </div>
+                          <div className={`${isDarkMode ? 'bg-dark-700' : 'bg-gray-50'} rounded-lg p-3`}>
+                            <p className="text-gray-500 text-xs">Commission</p>
+                            <p className="font-semibold text-green-500">50%</p>
+                          </div>
+                          <div className={`${isDarkMode ? 'bg-dark-700' : 'bg-gray-50'} rounded-lg p-3`}>
+                            <p className="text-gray-500 text-xs">Profit</p>
+                            <p className="text-accent-green font-semibold">${master.stats?.totalProfitGenerated?.toFixed(2) || '0.00'}</p>
+                          </div>
+                        </div>
+                        {master.minimumFollowerDeposit > 0 && (
+                          <div className="mb-3 px-3 py-2 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
+                            <p className="text-yellow-500 text-xs font-medium">
+                              Min. Deposit Required: ${master.minimumFollowerDeposit}
+                            </p>
+                          </div>
+                        )}
+                        {isFollowing ? (
+                          <button
+                            onClick={() => setActiveTab('subscriptions')}
+                            className="w-full bg-green-500/20 text-green-500 py-2 rounded-lg font-medium border border-green-500/50 hover:bg-green-500/30"
+                          >
+                            ✓ Following
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => { setSelectedMaster(master); setShowFollowModal(true) }}
+                            className="w-full bg-accent-green text-black py-2 rounded-lg font-medium hover:bg-accent-green/90"
+                          >
+                            Follow
+                          </button>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* My Subscriptions */}
+          {activeTab === 'subscriptions' && (
+            <div>
+              {mySubscriptions.length === 0 ? (
+                <div className="text-center py-12">
+                  <Users size={48} className="mx-auto text-gray-600 mb-4" />
+                  <p className="text-gray-500">You're not following any masters yet</p>
+                  <button onClick={() => setActiveTab('discover')} className="mt-4 text-accent-green hover:underline">
+                    Discover Masters →
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {mySubscriptions.map(sub => (
+                    <div key={sub._id} className={`${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'} rounded-xl p-5 border`}>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 bg-accent-green/20 rounded-full flex items-center justify-center">
+                            <span className="text-accent-green font-bold">{sub.masterId?.displayName?.charAt(0)}</span>
+                          </div>
+                          <div>
+                            <h3 className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{sub.masterId?.displayName}</h3>
+                            <p className="text-gray-500 text-sm">
+                              {sub.copyMode === 'FIXED_LOT' && `Fixed: ${sub.copyValue} lots`}
+                              {sub.copyMode === 'BALANCE_BASED' && 'Balance Based'}
+                              {sub.copyMode === 'EQUITY_BASED' && 'Equity Based'}
+                              {sub.copyMode === 'MULTIPLIER' && `Multiplier: ${sub.copyValue}x`}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                            sub.status === 'ACTIVE' ? 'bg-green-500/20 text-green-500' : 
+                            sub.status === 'PAUSED' ? 'bg-yellow-500/20 text-yellow-500' : 'bg-red-500/20 text-red-500'
+                          }`}>
+                            {sub.status}
+                          </span>
+                          <button
+                            onClick={() => handleOpenRefillModal(sub)}
+                            className={`px-3 py-1.5 ${isDarkMode ? 'bg-blue-500/20 hover:bg-blue-500/30' : 'bg-blue-100 hover:bg-blue-200'} text-blue-500 rounded-lg text-xs font-medium flex items-center gap-1`}
+                            title="Refill / Deposit"
+                          >
+                            <DollarSign size={14} />
+                            Refill
+                          </button>
+                          <button
+                            onClick={() => handleEditSubscription(sub)}
+                            className={`p-2 ${isDarkMode ? 'bg-dark-700 hover:bg-dark-600' : 'bg-gray-100 hover:bg-gray-200'} rounded-lg`}
+                            title="Edit Settings"
+                          >
+                            <Star size={16} className="text-blue-500" />
+                          </button>
+                          <button
+                            onClick={() => handlePauseResume(sub._id, sub.status)}
+                            className={`p-2 ${isDarkMode ? 'bg-dark-700 hover:bg-dark-600' : 'bg-gray-100 hover:bg-gray-200'} rounded-lg`}
+                            title={sub.status === 'ACTIVE' ? 'Pause' : 'Resume'}
+                          >
+                            {sub.status === 'ACTIVE' ? <Pause size={16} className="text-yellow-500" /> : <Play size={16} className="text-green-500" />}
+                          </button>
+                          <button
+                            onClick={() => handleUnfollow(sub._id)}
+                            className={`p-2 ${isDarkMode ? 'bg-dark-700 hover:bg-red-500/20' : 'bg-gray-100 hover:bg-red-100'} rounded-lg`}
+                            title="Unfollow"
+                          >
+                            <X size={16} className="text-red-500" />
+                          </button>
+                          <button
+                            onClick={() => {
+                              const accountId = sub.followerAccountId?._id || sub.followerAccountId
+                              if (accountId) {
+                                navigate(`/trade/${accountId}`)
+                              } else {
+                                alert('Copy trading account not found')
+                              }
+                            }}
+                            className="px-3 py-1.5 bg-accent-green text-black rounded-lg text-xs font-medium hover:bg-accent-green/90"
+                            title="View Open Positions"
+                          >
+                            View Trades
+                          </button>
+                        </div>
+                      </div>
+                      <div className={`grid grid-cols-2 sm:grid-cols-5 gap-3 mt-4 pt-4 border-t ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+                        <div>
+                          <p className="text-gray-500 text-xs">Total Trades</p>
+                          <p className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{sub.stats?.totalCopiedTrades || 0}</p>
+                        </div>
+                        <div>
+                          <p className="text-gray-500 text-xs">Open / Closed</p>
+                          <p className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                            <span className="text-blue-400">{sub.stats?.openTrades || 0}</span>
+                            {' / '}
+                            <span className="text-gray-400">{sub.stats?.closedTrades || 0}</span>
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-gray-500 text-xs">Total Profit</p>
+                          <p className="text-green-500 font-semibold">+${(sub.stats?.totalProfit || 0).toFixed(2)}</p>
+                        </div>
+                        <div>
+                          <p className="text-gray-500 text-xs">Total Loss</p>
+                          <p className="text-red-500 font-semibold">-${(sub.stats?.totalLoss || 0).toFixed(2)}</p>
+                        </div>
+                        <div>
+                          <p className="text-gray-500 text-xs">Net P&L</p>
+                          <p className={`font-semibold ${(sub.stats?.netPnl || 0) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                            {(sub.stats?.netPnl || 0) >= 0 ? '+' : ''}${(sub.stats?.netPnl || 0).toFixed(2)}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Copy Trades History */}
+          {activeTab === 'trades' && (
+            <div>
+              {myCopyTrades.length === 0 ? (
+                <div className="text-center py-12">
+                  <TrendingUp size={48} className="mx-auto text-gray-600 mb-4" />
+                  <p className="text-gray-500">No copy trades yet</p>
+                </div>
+              ) : (
+                <div className={`${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'} rounded-xl border overflow-hidden`}>
+                  <table className="w-full">
+                    <thead className={isDarkMode ? 'bg-dark-700' : 'bg-gray-50'}>
+                      <tr>
+                        <th className={`text-left text-xs font-medium px-4 py-3 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Master</th>
+                        <th className={`text-left text-xs font-medium px-4 py-3 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Symbol</th>
+                        <th className={`text-left text-xs font-medium px-4 py-3 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Side</th>
+                        <th className={`text-left text-xs font-medium px-4 py-3 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Lots</th>
+                        <th className={`text-left text-xs font-medium px-4 py-3 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Open Price</th>
+                        <th className={`text-left text-xs font-medium px-4 py-3 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Close Price</th>
+                        <th className={`text-left text-xs font-medium px-4 py-3 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Total P/L</th>
+                        <th className={`text-left text-xs font-medium px-4 py-3 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Master Share</th>
+                        <th className={`text-left text-xs font-medium px-4 py-3 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Your Share</th>
+                        <th className={`text-left text-xs font-medium px-4 py-3 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {myCopyTrades.map(trade => (
+                        <tr key={trade._id} className={`border-t ${isDarkMode ? 'border-gray-800' : 'border-gray-200'}`}>
+                          <td className={`px-4 py-3 text-sm ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{trade.masterId?.displayName || '-'}</td>
+                          <td className={`px-4 py-3 text-sm ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{trade.symbol}</td>
+                          <td className={`px-4 py-3 text-sm ${trade.side === 'BUY' ? 'text-green-500' : 'text-red-500'}`}>{trade.side}</td>
+                          <td className={`px-4 py-3 text-sm ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{trade.followerLotSize}</td>
+                          <td className={`px-4 py-3 text-sm ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{trade.followerOpenPrice?.toFixed(5)}</td>
+                          <td className={`px-4 py-3 text-sm ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{trade.followerClosePrice?.toFixed(5) || '-'}</td>
+                          <td className={`px-4 py-3 text-sm font-medium ${(trade.rawPnl || 0) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                            ${(trade.rawPnl || 0).toFixed(2)}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-yellow-500">
+                            {(trade.masterPnl || 0) > 0 ? `$${(trade.masterPnl || 0).toFixed(2)}` : '-'}
+                          </td>
+                          <td className={`px-4 py-3 text-sm font-medium ${(trade.followerPnl || 0) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                            ${(trade.followerPnl || 0).toFixed(2)}
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className={`px-2 py-1 rounded text-xs ${
+                              trade.status === 'OPEN' ? 'bg-red-500/20 text-blue-500' :
+                              trade.status === 'CLOSED' ? 'bg-green-500/20 text-green-500' : 'bg-red-500/20 text-red-500'
+                            }`}>
+                              {trade.status}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* My Followers (for Master Traders) */}
+          {activeTab === 'my-followers' && myMasterProfile?.status === 'ACTIVE' && (
+            <div>
+              {/* Summary Stats */}
+              <div className={`grid ${isMobile ? 'grid-cols-2' : 'grid-cols-4'} gap-3 mb-4`}>
+                <div className={`${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'} rounded-xl p-4 border`}>
+                  <p className="text-gray-500 text-xs mb-1">Total Followers</p>
+                  <p className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{myFollowers.length}</p>
+                </div>
+                <div className={`${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'} rounded-xl p-4 border`}>
+                  <p className="text-gray-500 text-xs mb-1">Active</p>
+                  <p className="text-green-500 text-xl font-bold">{myFollowers.filter(f => f.status === 'ACTIVE').length}</p>
+                </div>
+                <div className={`${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'} rounded-xl p-4 border`}>
+                  <p className="text-gray-500 text-xs mb-1">Total Equity</p>
+                  <p className="text-blue-400 text-xl font-bold">${myFollowers.reduce((sum, f) => sum + (f.stats?.equity || 0), 0).toFixed(2)}</p>
+                </div>
+                <div className={`${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'} rounded-xl p-4 border`}>
+                  <p className="text-gray-500 text-xs mb-1">Commission Earned</p>
+                  <p className="text-purple-400 text-xl font-bold">${myFollowers.reduce((sum, f) => sum + (f.stats?.totalCommissionPaid || 0), 0).toFixed(2)}</p>
+                </div>
+              </div>
+
+              {myFollowers.length === 0 ? (
+                <div className="text-center py-12">
+                  <Users size={48} className="mx-auto text-gray-600 mb-4" />
+                  <p className="text-gray-500">No followers yet</p>
+                  <p className="text-gray-600 text-sm mt-2">Share your profile to attract followers</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {myFollowers.map(follower => (
+                    <div key={follower._id} className={`${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'} rounded-xl ${isMobile ? 'p-4' : 'p-5'} border`}>
+                      {/* Header - Responsive */}
+                      <div className={`${isMobile ? 'flex flex-col gap-3' : 'flex items-center justify-between'}`}>
+                        <div className="flex items-center gap-3">
+                          <div className={`${isMobile ? 'w-10 h-10' : 'w-12 h-12'} bg-blue-500/20 rounded-full flex items-center justify-center`}>
+                            <span className="text-blue-500 font-bold">{follower.followerId?.firstName?.charAt(0) || 'U'}</span>
+                          </div>
+                          <div>
+                            <h3 className={`font-semibold ${isMobile ? 'text-sm' : ''} ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                              {follower.followerId?.firstName} {follower.followerId?.lastName}
+                            </h3>
+                            <p className="text-gray-500 text-xs">{follower.followerId?.email}</p>
+                          </div>
+                        </div>
+                        <div className={`${isMobile ? 'flex items-center justify-between' : 'text-right'}`}>
+                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                            follower.status === 'ACTIVE' ? 'bg-green-500/20 text-green-500' : 
+                            follower.status === 'PAUSED' ? 'bg-yellow-500/20 text-yellow-500' : 'bg-red-500/20 text-red-500'
+                          }`}>
+                            {follower.status}
+                          </span>
+                          <p className={`text-gray-500 text-xs ${isMobile ? '' : 'mt-2'}`}>
+                            Account: {follower.followerAccountId?.accountId}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Account Info */}
+                      <div className={`grid ${isMobile ? 'grid-cols-2' : 'grid-cols-3'} gap-3 mt-4 pt-4 border-t ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+                        <div>
+                          <p className="text-gray-500 text-xs">Equity</p>
+                          <p className={`font-semibold ${isMobile ? 'text-sm' : ''} ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                            ${(follower.stats?.equity || 0).toFixed(2)}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-gray-500 text-xs">Balance</p>
+                          <p className={`font-semibold ${isMobile ? 'text-sm' : ''} ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                            ${(follower.stats?.balance || 0).toFixed(2)}
+                          </p>
+                        </div>
+                        <div className={isMobile ? 'col-span-2' : ''}>
+                          <p className="text-gray-500 text-xs">Credit</p>
+                          <p className={`font-semibold ${isMobile ? 'text-sm' : ''} ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                            ${(follower.stats?.credit || 0).toFixed(2)}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Trade Stats */}
+                      <div className={`grid ${isMobile ? 'grid-cols-2' : 'grid-cols-5'} gap-3 mt-3 pt-3 border-t ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+                        <div>
+                          <p className="text-gray-500 text-xs">Total Trades</p>
+                          <p className={`font-semibold ${isMobile ? 'text-sm' : ''} ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                            {follower.stats?.totalCopiedTrades || 0}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-gray-500 text-xs">Open Trades</p>
+                          <p className="text-blue-400 font-semibold">{follower.stats?.openTrades || 0}</p>
+                        </div>
+                        <div>
+                          <p className="text-gray-500 text-xs">Profit</p>
+                          <p className="text-green-500 font-semibold">${(follower.stats?.totalProfit || 0).toFixed(2)}</p>
+                        </div>
+                        <div>
+                          <p className="text-gray-500 text-xs">Loss</p>
+                          <p className="text-red-500 font-semibold">${Math.abs(follower.stats?.totalLoss || 0).toFixed(2)}</p>
+                        </div>
+                        <div className={isMobile ? 'col-span-2' : ''}>
+                          <p className="text-gray-500 text-xs">Commission Earned</p>
+                          <p className="text-purple-400 font-semibold">${(follower.stats?.totalCommissionPaid || 0).toFixed(2)}</p>
+                        </div>
+                      </div>
+
+                      {/* Copy Mode & Joined Date */}
+                      <div className={`flex ${isMobile ? 'flex-col gap-2' : 'items-center justify-between'} mt-3 pt-3 border-t ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+                        <p className="text-gray-500 text-xs">
+                          Copy Mode: <span className={isDarkMode ? 'text-white' : 'text-gray-900'}>
+                            {follower.copyMode === 'EQUITY_BASED' ? 'Equity Based' : 
+                             follower.copyMode === 'FIXED_LOT' ? `Fixed: ${follower.copyValue} lots` :
+                             follower.copyMode === 'MULTIPLIER' ? `Multiplier: ${follower.copyValue}x` : follower.copyMode}
+                          </span>
+                        </p>
+                        <p className="text-gray-500 text-xs">
+                          Joined: {new Date(follower.joinedAt || follower.createdAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Commission Tab (for Master Traders) */}
+          {activeTab === 'commissions' && myMasterProfile?.status === 'ACTIVE' && (
+            <div>
+              {/* Commission Stats Cards */}
+              <div className={`grid ${isMobile ? 'grid-cols-2' : 'grid-cols-4'} gap-4 mb-6`}>
+                <div className={`${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'} rounded-xl p-4 border`}>
+                  <p className="text-gray-500 text-xs mb-1">Pending Commission</p>
+                  <p className="text-purple-400 text-xl font-bold">${masterStats?.pendingCommission?.toFixed(2) || '0.00'}</p>
+                </div>
+                <div className={`${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'} rounded-xl p-4 border`}>
+                  <p className="text-gray-500 text-xs mb-1">Total Earned</p>
+                  <p className="text-accent-green text-xl font-bold">${masterStats?.totalCommissionEarned?.toFixed(2) || '0.00'}</p>
+                </div>
+                <div className={`${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'} rounded-xl p-4 border`}>
+                  <p className="text-gray-500 text-xs mb-1">Total Withdrawn</p>
+                  <p className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>${masterStats?.totalCommissionWithdrawn?.toFixed(2) || '0.00'}</p>
+                </div>
+                <div className={`${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'} rounded-xl p-4 border`}>
+                  <p className="text-gray-500 text-xs mb-1">Your Commission Rate</p>
+                  <p className="text-blue-400 text-xl font-bold">50%</p>
+                </div>
+              </div>
+
+              {/* Withdraw Button */}
+              {masterStats?.pendingCommission >= 10 && (
+                <div className={`${isDarkMode ? 'bg-purple-500/10 border-purple-500/30' : 'bg-purple-50 border-purple-200'} rounded-xl p-4 border mb-6`}>
+                  <div className={`flex ${isMobile ? 'flex-col gap-3' : 'items-center justify-between'}`}>
+                    <div>
+                      <p className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                        You have ${masterStats.pendingCommission.toFixed(2)} available to withdraw
+                      </p>
+                      <p className="text-gray-500 text-sm">Minimum withdrawal: $10</p>
+                    </div>
+                    <button
+                      onClick={handleWithdrawCommission}
+                      className="bg-purple-500 text-white px-6 py-2 rounded-lg font-medium hover:bg-purple-600 flex items-center gap-2"
+                    >
+                      <DollarSign size={16} />
+                      Withdraw to Wallet
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Date Filter & View Toggle */}
+              <div className={`${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'} rounded-xl p-4 border mb-6`}>
+                <div className="flex flex-col gap-4">
+                  {/* Date Filter Row */}
+                  <div className={`flex ${isMobile ? 'flex-col' : 'flex-row items-center'} gap-2`}>
+                    <div className={`flex ${isMobile ? 'flex-wrap' : ''} items-center gap-2`}>
+                      <Calendar size={16} className="text-gray-500 flex-shrink-0" />
+                      <input
+                        type="date"
+                        value={dateFilter.startDate}
+                        onChange={(e) => setDateFilter({...dateFilter, startDate: e.target.value})}
+                        className={`${isDarkMode ? 'bg-dark-700 border-gray-600 text-white' : 'bg-gray-100 border-gray-300 text-gray-900'} border rounded-lg px-2 py-2 text-sm ${isMobile ? 'flex-1 min-w-[120px]' : ''}`}
+                      />
+                      <span className="text-gray-500 text-sm">to</span>
+                      <input
+                        type="date"
+                        value={dateFilter.endDate}
+                        onChange={(e) => setDateFilter({...dateFilter, endDate: e.target.value})}
+                        className={`${isDarkMode ? 'bg-dark-700 border-gray-600 text-white' : 'bg-gray-100 border-gray-300 text-gray-900'} border rounded-lg px-2 py-2 text-sm ${isMobile ? 'flex-1 min-w-[120px]' : ''}`}
+                      />
+                    </div>
+                    <button
+                      onClick={applyDateFilter}
+                      className={`bg-blue-500 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-600 ${isMobile ? 'w-full' : ''}`}
+                    >
+                      Apply
+                    </button>
+                  </div>
+                  {/* View Toggle Row */}
+                  <div className={`flex ${isMobile ? 'flex-col' : 'flex-row items-center justify-between'} gap-2`}>
+                    <div className={`flex ${isDarkMode ? 'bg-dark-700' : 'bg-gray-100'} rounded-lg p-1 ${isMobile ? 'w-full' : ''}`}>
+                      <button
+                        onClick={() => setCommissionView('history')}
+                        className={`flex-1 px-3 py-1.5 rounded text-sm ${commissionView === 'history' ? 'bg-purple-500 text-white' : 'text-gray-500'}`}
+                      >
+                        History
+                      </button>
+                      <button
+                        onClick={() => { setCommissionView('summary'); fetchUserSummary(); }}
+                        className={`flex-1 px-3 py-1.5 rounded text-sm ${commissionView === 'summary' ? 'bg-purple-500 text-white' : 'text-gray-500'}`}
+                      >
+                        <BarChart3 size={14} className="inline mr-1" />
+                        Summary
+                      </button>
+                    </div>
+                    <button
+                      onClick={handleExportCSV}
+                      className={`flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm ${isDarkMode ? 'bg-dark-700 text-white hover:bg-dark-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'} ${isMobile ? 'w-full' : ''}`}
+                    >
+                      <Download size={16} />
+                      Export CSV
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* User-wise Summary View */}
+              {commissionView === 'summary' && (
+                <div className={`${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'} rounded-xl border mb-6`}>
+                  <div className={`px-5 py-4 border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+                    <h3 className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Commission by Follower</h3>
+                    <p className="text-gray-500 text-sm">Total commission earned from each follower</p>
+                  </div>
+                  
+                  {userSummary.length === 0 ? (
+                    <div className="text-center py-12">
+                      <BarChart3 size={48} className="mx-auto text-gray-600 mb-4" />
+                      <p className="text-gray-500">No commission data yet</p>
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead className={isDarkMode ? 'bg-dark-700' : 'bg-gray-50'}>
+                          <tr>
+                            <th className={`text-left text-xs font-medium px-4 py-3 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Follower</th>
+                            <th className={`text-left text-xs font-medium px-4 py-3 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Email</th>
+                            <th className={`text-left text-xs font-medium px-4 py-3 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Total Profit</th>
+                            <th className={`text-left text-xs font-medium px-4 py-3 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Your Commission</th>
+                            <th className={`text-left text-xs font-medium px-4 py-3 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Trading Days</th>
+                            <th className={`text-left text-xs font-medium px-4 py-3 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Last Active</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {userSummary.map(user => (
+                            <tr key={user._id} className={`border-t ${isDarkMode ? 'border-gray-800' : 'border-gray-200'}`}>
+                              <td className={`px-4 py-3 text-sm font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{user.userName}</td>
+                              <td className={`px-4 py-3 text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>{user.userEmail}</td>
+                              <td className="px-4 py-3 text-sm text-accent-green font-medium">${user.totalProfit?.toFixed(2)}</td>
+                              <td className="px-4 py-3 text-sm text-purple-400 font-medium">${user.masterShare?.toFixed(2)}</td>
+                              <td className={`px-4 py-3 text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>{user.tradingDaysCount}</td>
+                              <td className={`px-4 py-3 text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>{user.lastTradingDay}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      {summaryTotals && (
+                        <div className={`px-4 py-3 border-t ${isDarkMode ? 'border-gray-700 bg-dark-700' : 'border-gray-200 bg-gray-50'}`}>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-500">Total from {summaryTotals.followerCount} followers:</span>
+                            <span className="text-purple-400 font-bold">${summaryTotals.totalMasterShare?.toFixed(2)}</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Commission History */}
+              {commissionView === 'history' && (
+              <div className={`${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'} rounded-xl border`}>
+                <div className={`px-5 py-4 border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+                  <h3 className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Commission History</h3>
+                  <p className="text-gray-500 text-sm">Profit share from your followers' trades</p>
+                </div>
+                
+                {myCommissions.length === 0 ? (
+                  <div className="text-center py-12">
+                    <DollarSign size={48} className="mx-auto text-gray-600 mb-4" />
+                    <p className="text-gray-500">No commission records yet</p>
+                    <p className="text-gray-600 text-sm mt-2">Commission is recorded when followers close profitable trades</p>
+                  </div>
+                ) : isMobile ? (
+                  <div className="p-4 space-y-3">
+                    {myCommissions.map(comm => (
+                      <div key={comm._id} className={`${isDarkMode ? 'bg-dark-700' : 'bg-gray-50'} rounded-lg p-4`}>
+                        <div className="flex justify-between items-start mb-2">
+                          <div>
+                            <p className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                              {comm.followerUserId?.firstName || 'User'} {comm.followerUserId?.lastName || ''}
+                            </p>
+                            <p className="text-gray-500 text-xs">{comm.tradingDay}</p>
+                          </div>
+                          <span className={`px-2 py-1 rounded text-xs ${
+                            comm.status === 'DEDUCTED' ? 'bg-green-500/20 text-green-500' :
+                            comm.status === 'SETTLED' ? 'bg-blue-500/20 text-blue-500' :
+                            comm.status === 'FAILED' ? 'bg-red-500/20 text-red-500' : 'bg-yellow-500/20 text-yellow-500'
+                          }`}>
+                            {comm.status}
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-3 gap-2 text-sm">
+                          <div>
+                            <p className="text-gray-500 text-xs">Trade P/L</p>
+                            <p className="text-green-500 font-medium">${comm.dailyProfit?.toFixed(2)}</p>
+                          </div>
+                          <div>
+                            <p className="text-gray-500 text-xs">Rate</p>
+                            <p className={isDarkMode ? 'text-gray-300' : 'text-gray-700'}>{comm.commissionPercentage}%</p>
+                          </div>
+                          <div>
+                            <p className="text-gray-500 text-xs">Your Share</p>
+                            <p className="text-purple-400 font-medium">${comm.masterShare?.toFixed(2)}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead className={isDarkMode ? 'bg-dark-700' : 'bg-gray-50'}>
+                        <tr>
+                          <th className={`text-left text-xs font-medium px-4 py-3 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Date</th>
+                          <th className={`text-left text-xs font-medium px-4 py-3 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Follower</th>
+                          <th className={`text-left text-xs font-medium px-4 py-3 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Trade P/L</th>
+                          <th className={`text-left text-xs font-medium px-4 py-3 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Rate</th>
+                          <th className={`text-left text-xs font-medium px-4 py-3 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Your Share</th>
+                          <th className={`text-left text-xs font-medium px-4 py-3 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {myCommissions.map(comm => (
+                          <tr key={comm._id} className={`border-t ${isDarkMode ? 'border-gray-800' : 'border-gray-200'}`}>
+                            <td className={`px-4 py-3 text-sm ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{comm.tradingDay}</td>
+                            <td className={`px-4 py-3 text-sm ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                              {comm.followerUserId?.firstName || 'User'} {comm.followerUserId?.lastName || ''}
+                            </td>
+                            <td className="px-4 py-3 text-sm text-green-500 font-medium">${comm.dailyProfit?.toFixed(2)}</td>
+                            <td className={`px-4 py-3 text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>{comm.commissionPercentage}%</td>
+                            <td className="px-4 py-3 text-sm text-purple-400 font-medium">${comm.masterShare?.toFixed(2)}</td>
+                            <td className="px-4 py-3">
+                              <span className={`px-2 py-1 rounded text-xs ${
+                                comm.status === 'DEDUCTED' ? 'bg-green-500/20 text-green-500' :
+                                comm.status === 'SETTLED' ? 'bg-blue-500/20 text-blue-500' :
+                                comm.status === 'FAILED' ? 'bg-red-500/20 text-red-500' : 'bg-yellow-500/20 text-yellow-500'
+                              }`}>
+                                {comm.status}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+              )}
+
+              {/* Commission Info */}
+              <div className={`mt-6 ${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'} rounded-xl p-5 border`}>
+                <h4 className={`font-semibold mb-3 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>How Commission Works</h4>
+                <ul className="text-gray-500 text-sm space-y-2">
+                  <li>• Commission is calculated daily based on your followers' profits</li>
+                  <li>• Your rate: <span className="text-purple-400 font-medium">50%</span> of daily profit (fixed)</li>
+                  <li>• Commission is only charged when followers make profit</li>
+                  <li>• Minimum withdrawal amount is $10</li>
+                  <li>• Withdrawals are transferred to your wallet instantly</li>
+                </ul>
+              </div>
+            </div>
+          )}
+        </div>
+      </main>
+
+      {/* Follow Modal */}
+      {showFollowModal && selectedMaster && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className={`${isDarkMode ? 'bg-dark-800 border-gray-700' : 'bg-white border-gray-200'} rounded-xl p-6 w-full max-w-md border max-h-[90vh] overflow-y-auto`}>
+            <h2 className={`text-xl font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-4`}>Follow {selectedMaster.displayName}</h2>
+            
+            <div className="space-y-4">
+              {/* Wallet Balance Display */}
+              <div className={`${isDarkMode ? 'bg-dark-700 border-gray-600' : 'bg-gray-100 border-gray-300'} rounded-lg p-4 border`}>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-500 text-sm">Your Wallet Balance</span>
+                  <span className={`${isDarkMode ? 'text-white' : 'text-gray-900'} font-bold text-lg`}>${walletBalance.toFixed(2)}</span>
+                </div>
+              </div>
+
+              {/* Use Existing Account Option */}
+              {accounts.filter(acc => acc.isCopyTrading).length > 0 && (
+                <div>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={useExistingAccount}
+                      onChange={(e) => {
+                        setUseExistingAccount(e.target.checked)
+                        if (!e.target.checked) setSelectedExistingAccount('')
+                      }}
+                      className="w-4 h-4 accent-accent-green"
+                    />
+                    <span className={`text-sm ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                      Use existing copy trading account
+                    </span>
+                  </label>
+                  
+                  {useExistingAccount && (
+                    <select
+                      value={selectedExistingAccount}
+                      onChange={(e) => setSelectedExistingAccount(e.target.value)}
+                      className={`w-full mt-2 px-4 py-3 ${isDarkMode ? 'bg-dark-700 border-gray-600 text-white' : 'bg-gray-100 border-gray-300 text-gray-900'} border rounded-lg focus:outline-none focus:border-accent-green`}
+                    >
+                      <option value="">Select an account</option>
+                      {accounts.filter(acc => acc.isCopyTrading).map(acc => (
+                        <option key={acc._id} value={acc._id}>
+                          {acc.accountId} - Credit: ${(acc.credit || 0).toFixed(2)}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+              )}
+
+              {/* Deposit Amount Input */}
+              <div>
+                <label className="text-gray-500 text-sm mb-1 block">
+                  {useExistingAccount ? 'Additional Deposit (optional)' : 'Deposit Amount *'}
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                  <input
+                    type="number"
+                    value={depositAmount}
+                    onChange={(e) => setDepositAmount(e.target.value)}
+                    min={useExistingAccount ? 0 : (selectedMaster.minimumFollowerDeposit || 0)}
+                    placeholder={useExistingAccount ? 'Optional' : `Min: $${selectedMaster.minimumFollowerDeposit || 0}`}
+                    className={`w-full pl-8 pr-4 py-3 ${isDarkMode ? 'bg-dark-700 border-gray-600 text-white' : 'bg-gray-100 border-gray-300 text-gray-900'} border rounded-lg text-lg focus:outline-none focus:border-accent-green`}
+                  />
+                </div>
+                <p className="text-gray-500 text-xs mt-1">
+                  {useExistingAccount 
+                    ? 'Add more credit to your existing account (optional)'
+                    : 'This amount will be deducted from your wallet and added as credit to your copy trading account'}
+                </p>
+                {!useExistingAccount && selectedMaster.minimumFollowerDeposit > 0 && (
+                  <p className="text-yellow-500 text-xs mt-1">
+                    Minimum deposit required: ${selectedMaster.minimumFollowerDeposit}
+                  </p>
+                )}
+              </div>
+
+              {/* Copy Mode - Fixed to Equity Based */}
+              <div className={`${isDarkMode ? 'bg-blue-500/10 border-blue-500/30' : 'bg-blue-50 border-blue-200'} rounded-lg p-3 border`}>
+                <p className="text-gray-500 text-sm mb-1">Copy Mode</p>
+                <p className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Equity Based (Proportional)</p>
+                <p className="text-gray-500 text-xs mt-1">Lot = Master Lot × (Your Equity / Master Equity)</p>
+              </div>
+
+              {/* Commission Info - Fixed 50/50 */}
+              <div className={`${isDarkMode ? 'bg-green-500/10 border-green-500/30' : 'bg-green-50 border-green-200'} rounded-lg p-3 border`}>
+                <p className="text-gray-500 text-sm mb-2">Commission Structure (Fixed)</p>
+                <div className="flex items-center justify-between">
+                  <div className="text-center flex-1">
+                    <p className="text-green-500 font-bold">50%</p>
+                    <p className="text-gray-500 text-xs">Master</p>
+                  </div>
+                  <div className="text-gray-400">|</div>
+                  <div className="text-center flex-1">
+                    <p className="text-blue-500 font-bold">50%</p>
+                    <p className="text-gray-500 text-xs">You Keep</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Info Box */}
+              <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3">
+                <p className="text-blue-500 text-sm font-medium mb-2">How it works:</p>
+                <ul className="text-blue-500/80 text-xs space-y-1">
+                  <li>• {useExistingAccount ? 'Your selected account will be used' : 'A new Copy Trading account will be created for you'}</li>
+                  <li>• Your deposit goes to Credit (non-withdrawable)</li>
+                  <li>• Profits from copied trades go to Balance (withdrawable)</li>
+                  <li>• Losses and commissions are deducted from Credit</li>
+                </ul>
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => { setShowFollowModal(false); setDepositAmount(''); setUseExistingAccount(false); setSelectedExistingAccount(''); }}
+                className={`flex-1 ${isDarkMode ? 'bg-dark-700 text-white hover:bg-dark-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'} py-2 rounded-lg`}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleFollow}
+                disabled={useExistingAccount ? (useExistingAccount && !selectedExistingAccount) : (!depositAmount || parseFloat(depositAmount) < (selectedMaster.minimumFollowerDeposit || 0))}
+                className="flex-1 bg-accent-green text-black py-2 rounded-lg font-medium hover:bg-accent-green/90 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Deposit & Follow
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Master Application Modal */}
+      {showMasterModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className={`${isDarkMode ? 'bg-dark-800 border-gray-700' : 'bg-white border-gray-200'} rounded-xl p-4 sm:p-6 w-full max-w-md max-h-[90vh] overflow-y-auto border`}>
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 bg-yellow-500/20 rounded-full flex items-center justify-center">
+                <Crown size={20} className="text-yellow-500" />
+              </div>
+              <div>
+                <h2 className={`text-base sm:text-xl font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Become a Master Trader</h2>
+                <p className="text-gray-500 text-xs sm:text-sm">Share your trades with followers</p>
+              </div>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="text-gray-500 text-sm mb-1 block">Display Name *</label>
+                <input
+                  type="text"
+                  value={masterForm.displayName}
+                  onChange={(e) => setMasterForm(prev => ({ ...prev, displayName: e.target.value }))}
+                  placeholder="Your trading name"
+                  className={`w-full ${isDarkMode ? 'bg-dark-700 border-gray-600 text-white' : 'bg-gray-100 border-gray-300 text-gray-900'} border rounded-lg px-3 py-2`}
+                />
+              </div>
+
+              <div>
+                <label className="text-gray-500 text-sm mb-1 block">Description</label>
+                <textarea
+                  value={masterForm.description}
+                  onChange={(e) => setMasterForm(prev => ({ ...prev, description: e.target.value }))}
+                  placeholder="Tell followers about your trading strategy..."
+                  rows={3}
+                  className={`w-full ${isDarkMode ? 'bg-dark-700 border-gray-600 text-white' : 'bg-gray-100 border-gray-300 text-gray-900'} border rounded-lg px-3 py-2 resize-none`}
+                />
+              </div>
+
+              <div>
+                <label className="text-gray-500 text-sm mb-1 block">Trading Account *</label>
+                <select
+                  value={masterForm.tradingAccountId || (accounts.filter(a => !a.isCopyTrading && !a.isDemo && !a.accountTypeId?.isDemo).length > 0 ? accounts.filter(a => !a.isCopyTrading && !a.isDemo && !a.accountTypeId?.isDemo)[0]._id : '')}
+                  onChange={(e) => setMasterForm(prev => ({ ...prev, tradingAccountId: e.target.value }))}
+                  className={`w-full ${isDarkMode ? 'bg-dark-700 border-gray-600 text-white' : 'bg-gray-100 border-gray-300 text-gray-900'} border rounded-lg px-3 py-2`}
+                >
+                  {accounts.filter(a => !a.isCopyTrading && !a.isDemo && !a.accountTypeId?.isDemo).length === 0 && <option value="">No trading accounts available</option>}
+                  {accounts.filter(a => !a.isCopyTrading && !a.isDemo && !a.accountTypeId?.isDemo).map(acc => (
+                    <option key={acc._id} value={acc._id}>{acc.accountId} - Balance: ${(acc.balance || 0).toFixed(2)}</option>
+                  ))}
+                </select>
+                <p className="text-gray-500 text-xs mt-1">
+                  Select a regular trading account. Trades from this account will be copied to followers. Your balance is your equity.
+                </p>
+                {accounts.filter(a => !a.isCopyTrading && !a.isDemo && !a.accountTypeId?.isDemo).length === 0 && (
+                  <p className="text-yellow-500 text-xs mt-2">
+                    You need a regular trading account with balance to become a master. Please create an account first.
+                  </p>
+                )}
+              </div>
+
+              {/* Commission Info - Fixed 50/50 Split */}
+              <div className={`${isDarkMode ? 'bg-green-500/10 border-green-500/30' : 'bg-green-50 border-green-200'} rounded-lg p-4 border`}>
+                <p className={`${isDarkMode ? 'text-white' : 'text-gray-900'} text-sm font-medium mb-2`}>Commission Structure (Fixed)</p>
+                <div className="flex items-center justify-between">
+                  <div className="text-center flex-1">
+                    <p className="text-green-500 text-lg font-bold">50%</p>
+                    <p className="text-gray-500 text-xs">You (Master)</p>
+                  </div>
+                  <div className="text-gray-500 text-xl">|</div>
+                  <div className="text-center flex-1">
+                    <p className="text-blue-500 text-lg font-bold">50%</p>
+                    <p className="text-gray-500 text-xs">Follower Keeps</p>
+                  </div>
+                </div>
+                <p className="text-gray-500 text-xs mt-2 text-center">Commission is automatically split 50/50 on profitable trades</p>
+              </div>
+
+              <div>
+                <label className="text-gray-500 text-sm mb-1 block">Minimum Follower Deposit ($)</label>
+                <input
+                  type="number"
+                  value={masterForm.minimumFollowerDeposit === 0 ? '' : masterForm.minimumFollowerDeposit}
+                  onChange={(e) => setMasterForm(prev => ({ ...prev, minimumFollowerDeposit: e.target.value === '' ? 0 : parseFloat(e.target.value) }))}
+                  onBlur={(e) => { if (e.target.value === '') setMasterForm(prev => ({ ...prev, minimumFollowerDeposit: 0 })) }}
+                  min="0"
+                  placeholder="0"
+                  className={`w-full ${isDarkMode ? 'bg-dark-700 border-gray-600 text-white' : 'bg-gray-100 border-gray-300 text-gray-900'} border rounded-lg px-3 py-2`}
+                />
+                <p className="text-gray-500 text-xs mt-1">Minimum balance required for followers to copy you (0 = no minimum)</p>
+              </div>
+
+              <div className={`${isDarkMode ? 'bg-dark-700' : 'bg-gray-100'} rounded-lg p-4 space-y-2`}>
+                <p className={`${isDarkMode ? 'text-white' : 'text-gray-900'} text-sm font-medium`}>Requirements:</p>
+                <ul className="text-gray-500 text-xs space-y-1">
+                  <li>• Minimum account balance may be required</li>
+                  <li>• Trading history will be reviewed</li>
+                  <li>• Admin approval is required</li>
+                </ul>
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => setShowMasterModal(false)}
+                className={`flex-1 ${isDarkMode ? 'bg-dark-700 text-white hover:bg-dark-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'} py-2.5 rounded-lg text-sm sm:text-base`}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleApplyMaster}
+                disabled={applyingMaster}
+                className="flex-1 bg-yellow-500 text-black py-2.5 rounded-lg font-medium hover:bg-yellow-400 disabled:opacity-50 text-sm sm:text-base"
+              >
+                {applyingMaster ? 'Submitting...' : 'Submit'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Refill/Deposit Modal */}
+      {showRefillModal && refillSubscription && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className={`${isDarkMode ? 'bg-dark-800 border-gray-700' : 'bg-white border-gray-200'} rounded-xl p-4 sm:p-6 w-full max-w-md border`}>
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 bg-blue-500/20 rounded-full flex items-center justify-center">
+                <DollarSign size={20} className="text-blue-500" />
+              </div>
+              <div>
+                <h2 className={`text-base sm:text-xl font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Refill Copy Trading</h2>
+                <p className="text-gray-500 text-xs sm:text-sm">Following: {refillSubscription.masterId?.displayName}</p>
+              </div>
+            </div>
+
+            {refillLoading ? (
+              <div className="text-center py-8">
+                <div className="animate-spin w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full mx-auto mb-3"></div>
+                <p className="text-gray-500 text-sm">Loading balance info...</p>
+              </div>
+            ) : refillInfo ? (
+              <div className="space-y-4">
+                {/* Balance Display */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className={`${isDarkMode ? 'bg-dark-700' : 'bg-gray-100'} rounded-lg p-3`}>
+                    <p className="text-gray-500 text-xs mb-1">Main Wallet</p>
+                    <p className={`text-lg font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                      ${refillInfo.walletBalance.toFixed(2)}
+                    </p>
+                    <p className="text-gray-500 text-xs">Available</p>
+                  </div>
+                  <div className={`${isDarkMode ? 'bg-dark-700' : 'bg-gray-100'} rounded-lg p-3`}>
+                    <p className="text-gray-500 text-xs mb-1">Copy Trading</p>
+                    <p className="text-lg font-bold text-blue-500">
+                      ${refillInfo.copyTradingEquity.toFixed(2)}
+                    </p>
+                    <p className="text-gray-500 text-xs">
+                      Credit: ${refillInfo.copyTradingCredit.toFixed(2)}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Amount Input */}
+                <div>
+                  <label className="text-gray-500 text-sm mb-1 block">Deposit Amount ($)</label>
+                  <input
+                    type="number"
+                    value={refillAmount}
+                    onChange={(e) => setRefillAmount(e.target.value)}
+                    placeholder="Enter amount"
+                    min="1"
+                    max={refillInfo.walletBalance}
+                    className={`w-full ${isDarkMode ? 'bg-dark-700 border-gray-600 text-white' : 'bg-gray-100 border-gray-300 text-gray-900'} border rounded-lg px-3 py-2 text-lg`}
+                  />
+                  {refillAmount && parseFloat(refillAmount) > refillInfo.walletBalance && (
+                    <p className="text-red-500 text-xs mt-1">Insufficient wallet balance</p>
+                  )}
+                </div>
+
+                {/* Quick Amount Buttons */}
+                <div className="flex gap-2">
+                  {[50, 100, 250, 500].map(amt => (
+                    <button
+                      key={amt}
+                      onClick={() => setRefillAmount(Math.min(amt, refillInfo.walletBalance).toString())}
+                      disabled={refillInfo.walletBalance < amt}
+                      className={`flex-1 py-2 rounded-lg text-sm font-medium ${
+                        isDarkMode 
+                          ? 'bg-dark-700 text-gray-300 hover:bg-dark-600 disabled:opacity-50' 
+                          : 'bg-gray-200 text-gray-700 hover:bg-gray-300 disabled:opacity-50'
+                      }`}
+                    >
+                      ${amt}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Max Button */}
+                <button
+                  onClick={() => setRefillAmount(refillInfo.walletBalance.toString())}
+                  disabled={refillInfo.walletBalance <= 0}
+                  className={`w-full py-2 rounded-lg text-sm font-medium ${
+                    isDarkMode 
+                      ? 'bg-blue-500/20 text-blue-400 hover:bg-blue-500/30' 
+                      : 'bg-blue-100 text-blue-600 hover:bg-blue-200'
+                  } disabled:opacity-50`}
+                >
+                  Use Max (${refillInfo.walletBalance.toFixed(2)})
+                </button>
+
+                {/* Info Box */}
+                <div className={`${isDarkMode ? 'bg-blue-500/10 border-blue-500/30' : 'bg-blue-50 border-blue-200'} rounded-lg p-3 border`}>
+                  <p className="text-blue-500 text-sm font-medium mb-1">How it works:</p>
+                  <ul className="text-blue-500/80 text-xs space-y-1">
+                    <li>• Amount will be deducted from your Main Wallet</li>
+                    <li>• Funds will be added to Copy Trading Credit</li>
+                    <li>• Credit is used for margin and losses</li>
+                    <li>• Profits go to Balance (withdrawable)</li>
+                  </ul>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-red-500">Failed to load balance info</p>
+              </div>
+            )}
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => {
+                  setShowRefillModal(false)
+                  setRefillSubscription(null)
+                  setRefillAmount('')
+                  setRefillInfo(null)
+                }}
+                className={`flex-1 ${isDarkMode ? 'bg-dark-700 text-white hover:bg-dark-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'} py-2.5 rounded-lg text-sm sm:text-base`}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleRefillDeposit}
+                disabled={
+                  refillProcessing || 
+                  !refillAmount || 
+                  parseFloat(refillAmount) <= 0 || 
+                  (refillInfo && parseFloat(refillAmount) > refillInfo.walletBalance)
+                }
+                className="flex-1 bg-blue-500 text-white py-2.5 rounded-lg font-medium hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base flex items-center justify-center gap-2"
+              >
+                {refillProcessing ? (
+                  <>
+                    <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></div>
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    <DollarSign size={16} />
+                    Deposit
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Subscription Modal */}
+      {showEditModal && editingSubscription && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className={`${isDarkMode ? 'bg-dark-800 border-gray-700' : 'bg-white border-gray-200'} rounded-xl p-6 w-full max-w-md border`}>
+            <h2 className={`text-xl font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-4`}>Edit Subscription</h2>
+            <p className="text-gray-500 text-sm mb-4">Following: {editingSubscription.masterId?.displayName}</p>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="text-gray-500 text-sm mb-1 block">Trading Account</label>
+                <select
+                  value={editAccount}
+                  onChange={(e) => setEditAccount(e.target.value)}
+                  className={`w-full ${isDarkMode ? 'bg-dark-700 border-gray-600 text-white' : 'bg-gray-100 border-gray-300 text-gray-900'} border rounded-lg px-3 py-2`}
+                >
+                  {accounts.map(acc => (
+                    <option key={acc._id} value={acc._id}>{acc.accountId} - ${acc.balance?.toFixed(2)}</option>
+                  ))}
+                </select>
+                <p className="text-gray-500 text-xs mt-1">Change the account where trades will be copied</p>
+              </div>
+
+              {/* Copy Mode - Fixed to Equity Based */}
+              <div className={`${isDarkMode ? 'bg-blue-500/10 border-blue-500/30' : 'bg-blue-50 border-blue-200'} rounded-lg p-3 border`}>
+                <p className="text-gray-500 text-sm mb-1">Copy Mode</p>
+                <p className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Equity Based (Proportional)</p>
+                <p className="text-gray-500 text-xs mt-1">Lot = Master Lot × (Your Equity / Master Equity)</p>
+              </div>
+
+              <div className="hidden">
+                <p className="text-gray-500 text-xs mt-1">
+                  {editCopyMode === 'FIXED_LOT' && 'Each copied trade will use this fixed lot size'}
+                  {editCopyMode === 'BALANCE_BASED' && 'Maximum lot size limit for proportional calculation'}
+                  {editCopyMode === 'EQUITY_BASED' && 'Maximum lot size limit for proportional calculation'}
+                  {editCopyMode === 'MULTIPLIER' && 'Multiply master lot by this value'}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => { setShowEditModal(false); setEditingSubscription(null); }}
+                className={`flex-1 ${isDarkMode ? 'bg-dark-700 text-white hover:bg-dark-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'} py-2 rounded-lg`}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveSubscription}
+                className="flex-1 bg-red-500 text-white py-2 rounded-lg font-medium hover:bg-red-600"
+              >
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+export default CopyTradePage

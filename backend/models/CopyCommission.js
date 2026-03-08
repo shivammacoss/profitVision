@@ -1,0 +1,94 @@
+import mongoose from 'mongoose'
+
+const copyCommissionSchema = new mongoose.Schema({
+  // References
+  masterId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'MasterTrader',
+    required: true
+  },
+  followerId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'CopyFollower',
+    required: true
+  },
+  followerUserId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
+  followerAccountId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'TradingAccount',
+    required: true
+  },
+  // Daily tracking
+  tradingDay: {
+    type: String, // Format: YYYY-MM-DD
+    required: true
+  },
+  // Profit calculation
+  dailyProfit: {
+    type: Number,
+    required: true
+  },
+  commissionPercentage: {
+    type: Number,
+    required: true
+  },
+  // Commission breakdown
+  totalCommission: {
+    type: Number,
+    required: true
+  },
+  adminShare: {
+    type: Number,
+    required: true
+  },
+  masterShare: {
+    type: Number,
+    required: true
+  },
+  adminSharePercentage: {
+    type: Number,
+    required: true
+  },
+  // Status
+  status: {
+    type: String,
+    enum: ['PENDING', 'DEDUCTED', 'SETTLED', 'FAILED'],
+    default: 'PENDING'
+  },
+  // Deduction from follower
+  deductedAt: {
+    type: Date,
+    default: null
+  },
+  deductionError: {
+    type: String,
+    default: null
+  },
+  // Settlement to master
+  settledAt: {
+    type: Date,
+    default: null
+  },
+  settledBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null
+  },
+  // Trade reference for per-trade commission tracking
+  tradeId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'CopyTrade',
+    default: null
+  }
+}, { timestamps: true })
+
+// Compound index to prevent duplicate commissions per trade
+copyCommissionSchema.index({ masterId: 1, tradeId: 1 }, { unique: true, sparse: true })
+copyCommissionSchema.index({ masterId: 1, status: 1 })
+copyCommissionSchema.index({ tradingDay: 1, status: 1 })
+
+export default mongoose.model('CopyCommission', copyCommissionSchema)

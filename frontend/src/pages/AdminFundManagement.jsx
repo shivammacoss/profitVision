@@ -1,0 +1,526 @@
+import { useState, useEffect } from 'react'
+import AdminLayout from '../components/AdminLayout'
+import { useTheme } from '../context/ThemeContext'
+import { 
+  Wallet,
+  ArrowUpRight,
+  ArrowDownRight,
+  Search,
+  Filter,
+  RefreshCw,
+  Eye,
+  Check,
+  X,
+  Clock,
+  Building2,
+  Smartphone,
+  DollarSign
+} from 'lucide-react'
+
+import { API_URL } from '../config/api'
+
+const AdminFundManagement = () => {
+  const { isDarkMode } = useTheme()
+  const [searchTerm, setSearchTerm] = useState('')
+  const [filterType, setFilterType] = useState('all')
+  const [transactions, setTransactions] = useState([])
+  const [stats, setStats] = useState({ deposits: 0, withdrawals: 0, ibEntryFees: 0, pending: 0, net: 0 })
+  const [loading, setLoading] = useState(true)
+  const [selectedTxn, setSelectedTxn] = useState(null)
+  const [userDetails, setUserDetails] = useState(null)
+  const [showDetailsModal, setShowDetailsModal] = useState(false)
+
+  useEffect(() => {
+    fetchTransactions()
+  }, [filterType])
+
+  const fetchTransactions = async () => {
+    setLoading(true)
+    try {
+      const res = await fetch(`${API_URL}/wallet/admin/transactions`)
+      const data = await res.json()
+      if (data.transactions) {
+        let filtered = data.transactions
+        if (filterType !== 'all') {
+          if (filterType === 'ib_entry_fee') {
+            filtered = data.transactions.filter(t => t.type === 'IB_Entry_Fee')
+          } else {
+            filtered = data.transactions.filter(t => t.type?.toLowerCase() === filterType)
+          }
+        }
+        setTransactions(filtered)
+        
+        // Calculate stats
+        const deposits = data.transactions.filter(t => t.type?.toUpperCase() === 'DEPOSIT' && t.status?.toUpperCase() === 'APPROVED')
+          .reduce((sum, t) => sum + (t.amount || 0), 0)
+        const withdrawals = data.transactions.filter(t => t.type?.toUpperCase() === 'WITHDRAWAL' && t.status?.toUpperCase() === 'APPROVED')
+          .reduce((sum, t) => sum + (t.amount || 0), 0)
+        const ibEntryFees = data.transactions.filter(t => t.type === 'IB_Entry_Fee')
+          .reduce((sum, t) => sum + (t.amount || 0), 0)
+        const pending = data.transactions.filter(t => t.status?.toUpperCase() === 'PENDING').length
+        
+        setStats({
+          deposits,
+          withdrawals,
+          ibEntryFees,
+          pending,
+          net: deposits - withdrawals + ibEntryFees
+        })
+      }
+    } catch (error) {
+      console.error('Error fetching transactions:', error)
+    }
+    setLoading(false)
+  }
+
+  const handleApprove = async (txn) => {
+    const txnId = txn._id || txn
+    const isCryptoDeposit = txn.paymentMethod === 'Crypto (OxaPay)'
+    
+    try {
+      let res
+      if (isCryptoDeposit) {
+        // Use OxaPay admin endpoint for crypto deposits
+        res = await fetch(`${API_URL}/oxapay/admin/approve-crypto-deposit/${txnId}`, {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('adminToken') || localStorage.getItem('token')}`
+          },
+          body: JSON.stringify({ adminRemarks: '' })
+        })
+      } else {
+        res = await fetch(`${API_URL}/wallet/transaction/${txnId}/approve`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ adminRemarks: '' })
+        })
+      }
+      const data = await res.json()
+      if (res.ok || data.success) {
+        alert('Transaction approved successfully!')
+        fetchTransactions()
+      } else {
+        alert(data.message || 'Error approving transaction')
+      }
+    } catch (error) {
+      console.error('Error approving transaction:', error)
+      alert('Error approving transaction')
+    }
+  }
+
+  const handleReject = async (txn) => {
+    const txnId = txn._id || txn
+    const isCryptoDeposit = txn.paymentMethod === 'Crypto (OxaPay)'
+    const remarks = prompt('Enter rejection reason:')
+    if (!remarks && isCryptoDeposit) {
+      alert('Rejection reason is required for crypto deposits')
+      return
+    }
+    
+    try {
+      let res
+      if (isCryptoDeposit) {
+        // Use OxaPay admin endpoint for crypto deposits
+        res = await fetch(`${API_URL}/oxapay/admin/reject-crypto-deposit/${txnId}`, {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('adminToken') || localStorage.getItem('token')}`
+          },
+          body: JSON.stringify({ reason: remarks || 'Rejected by admin' })
+        })
+      } else {
+        res = await fetch(`${API_URL}/wallet/transaction/${txnId}/reject`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ adminRemarks: remarks || '' })
+        })
+      }
+      const data = await res.json()
+      if (res.ok || data.success) {
+        alert('Transaction rejected!')
+        fetchTransactions()
+      } else {
+        alert(data.message || 'Error rejecting transaction')
+      }
+    } catch (error) {
+      console.error('Error rejecting transaction:', error)
+      alert('Error rejecting transaction')
+    }
+  }
+
+  const filteredTransactions = transactions.filter(txn => {
+    const matchesSearch = txn.transactionId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      txn.userId?.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      txn.userId?.email?.toLowerCase().includes(searchTerm.toLowerCase())
+    return matchesSearch
+  })
+
+  const getStatusColor = (status) => {
+    const s = status?.toLowerCase()
+    if (s === 'approved') return 'bg-green-500/20 text-green-500'
+    if (s === 'pending') return 'bg-yellow-500/20 text-yellow-500'
+    if (s === 'auto-verified') return 'bg-blue-500/20 text-blue-500'
+    if (s === 'confirming') return 'bg-orange-500/20 text-orange-500'
+    if (s === 'rejected') return 'bg-red-500/20 text-red-500'
+    return 'bg-gray-500/20 text-gray-400'
+  }
+
+  const isPending = (status) => {
+    const s = status?.toLowerCase()
+    return s === 'pending' || s === 'auto-verified'
+  }
+
+  const viewTransactionDetails = async (txn) => {
+    setSelectedTxn(txn)
+    setShowDetailsModal(true)
+    
+    // Fetch user details including bank info
+    try {
+      const res = await fetch(`${API_URL}/auth/user/${txn.userId?._id || txn.userId}`)
+      const data = await res.json()
+      if (data.user) {
+        setUserDetails(data.user)
+      }
+    } catch (error) {
+      console.error('Error fetching user details:', error)
+    }
+  }
+
+  const closeDetailsModal = () => {
+    setShowDetailsModal(false)
+    setSelectedTxn(null)
+    setUserDetails(null)
+  }
+
+  return (
+    <AdminLayout title="Fund Management" subtitle="Manage deposits and withdrawals">
+      {/* Stats */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div className={`${isDarkMode ? 'bg-dark-800 border-gray-700' : 'bg-white border-gray-200'} rounded-xl p-5 border shadow-sm`}>
+          <div className="flex items-center gap-2 mb-2">
+            <ArrowDownRight size={18} className="text-green-500" />
+            <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-500'} text-sm`}>Total Deposits</p>
+          </div>
+          <p className={`${isDarkMode ? 'text-white' : 'text-gray-900'} text-2xl font-bold`}>${stats.deposits.toLocaleString()}</p>
+        </div>
+        <div className={`${isDarkMode ? 'bg-dark-800 border-gray-700' : 'bg-white border-gray-200'} rounded-xl p-5 border shadow-sm`}>
+          <div className="flex items-center gap-2 mb-2">
+            <ArrowUpRight size={18} className="text-red-500" />
+            <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-500'} text-sm`}>Total Withdrawals</p>
+          </div>
+          <p className={`${isDarkMode ? 'text-white' : 'text-gray-900'} text-2xl font-bold`}>${stats.withdrawals.toLocaleString()}</p>
+        </div>
+        <div className={`${isDarkMode ? 'bg-dark-800 border-gray-700' : 'bg-white border-gray-200'} rounded-xl p-5 border shadow-sm`}>
+          <div className="flex items-center gap-2 mb-2">
+            <Clock size={18} className="text-yellow-500" />
+            <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-500'} text-sm`}>Pending Requests</p>
+          </div>
+          <p className={`${isDarkMode ? 'text-white' : 'text-gray-900'} text-2xl font-bold`}>{stats.pending}</p>
+        </div>
+        <div className={`${isDarkMode ? 'bg-dark-800 border-gray-700' : 'bg-white border-gray-200'} rounded-xl p-5 border shadow-sm`}>
+          <div className="flex items-center gap-2 mb-2">
+            <Wallet size={18} className="text-purple-500" />
+            <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-500'} text-sm`}>Net Balance</p>
+          </div>
+          <p className={`${isDarkMode ? 'text-white' : 'text-gray-900'} text-2xl font-bold`}>${stats.net.toLocaleString()}</p>
+        </div>
+      </div>
+
+      {/* Transactions Table */}
+      <div className={`${isDarkMode ? 'bg-dark-800 border-gray-700' : 'bg-white border-gray-200'} rounded-xl border shadow-sm overflow-hidden`}>
+        <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 sm:p-5 border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+          <h2 className={`${isDarkMode ? 'text-white' : 'text-gray-900'} font-semibold text-lg`}>All Transactions</h2>
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+            <div className="relative">
+              <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+              <input
+                type="text"
+                placeholder="Search transactions..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className={`w-full sm:w-64 ${isDarkMode ? 'bg-dark-700 border-gray-600 text-white' : 'bg-gray-100 border-gray-300 text-gray-900'} border rounded-lg pl-10 pr-4 py-2 placeholder-gray-500 focus:outline-none focus:border-gray-400`}
+              />
+            </div>
+            <select
+              value={filterType}
+              onChange={(e) => setFilterType(e.target.value)}
+              className={`${isDarkMode ? 'bg-dark-700 border-gray-600 text-white' : 'bg-gray-100 border-gray-300 text-gray-900'} border rounded-lg px-4 py-2 focus:outline-none focus:border-gray-400`}
+            >
+              <option value="all">All Types</option>
+              <option value="deposit">Deposits</option>
+              <option value="withdrawal">Withdrawals</option>
+              <option value="ib_entry_fee">IB Entry Fees</option>
+            </select>
+          </div>
+        </div>
+
+        {loading ? (
+          <div className="text-center py-12 text-gray-500">Loading transactions...</div>
+        ) : filteredTransactions.length === 0 ? (
+          <div className="text-center py-12 text-gray-500">No transactions found</div>
+        ) : (
+          <>
+            {/* Mobile Card View */}
+            <div className="block lg:hidden p-4 space-y-3">
+              {filteredTransactions.map((txn) => (
+                <div key={txn._id} className={`${isDarkMode ? 'bg-dark-700 border-gray-600' : 'bg-gray-50 border-gray-200'} rounded-xl p-4 border`}>
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                        txn.type?.toUpperCase() === 'DEPOSIT' ? 'bg-green-500/20' : 'bg-red-500/20'
+                      }`}>
+                        {txn.type?.toUpperCase() === 'DEPOSIT' ? (
+                          <ArrowDownRight size={16} className="text-green-500" />
+                        ) : (
+                          <ArrowUpRight size={16} className="text-red-500" />
+                        )}
+                      </div>
+                      <div>
+                        <p className={`${isDarkMode ? 'text-white' : 'text-gray-900'} font-medium`}>{txn.userId?.firstName || txn.userId?.email}</p>
+                        <p className="text-gray-500 text-xs">{txn.transactionId}</p>
+                      </div>
+                    </div>
+                    <span className={`px-2 py-1 rounded-full text-xs ${getStatusColor(txn.status)}`}>
+                      {txn.status}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div>
+                      <p className="text-gray-500">Amount</p>
+                      <p className={txn.type?.toUpperCase() === 'DEPOSIT' ? 'text-green-500 font-medium' : 'text-red-500 font-medium'}>
+                        {txn.type?.toUpperCase() === 'DEPOSIT' ? '+' : '-'}${(txn.amount || 0).toLocaleString()}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500">Method</p>
+                      <p className={`${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{txn.paymentMethod || '-'}</p>
+                    </div>
+                  </div>
+                  {isPending(txn.status) && (
+                    <div className={`flex gap-2 mt-3 pt-3 border-t ${isDarkMode ? 'border-gray-600' : 'border-gray-200'}`}>
+                      <button onClick={() => handleApprove(txn)} className="flex-1 flex items-center justify-center gap-1 py-2 bg-green-500/20 text-green-500 rounded-lg text-sm">
+                        <Check size={14} /> Approve
+                      </button>
+                      <button onClick={() => handleReject(txn)} className="flex-1 flex items-center justify-center gap-1 py-2 bg-red-500/20 text-red-500 rounded-lg text-sm">
+                        <X size={14} /> Reject
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop Table */}
+            <div className="hidden lg:block overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className={`border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+                    <th className="text-left text-gray-500 text-sm font-medium py-3 px-4">Transaction ID</th>
+                    <th className="text-left text-gray-500 text-sm font-medium py-3 px-4">User</th>
+                    <th className="text-left text-gray-500 text-sm font-medium py-3 px-4">Type</th>
+                    <th className="text-left text-gray-500 text-sm font-medium py-3 px-4">Amount</th>
+                    <th className="text-left text-gray-500 text-sm font-medium py-3 px-4">Method</th>
+                    <th className="text-left text-gray-500 text-sm font-medium py-3 px-4">Status</th>
+                    <th className="text-left text-gray-500 text-sm font-medium py-3 px-4">Date</th>
+                    <th className="text-left text-gray-500 text-sm font-medium py-3 px-4">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredTransactions.map((txn) => (
+                    <tr key={txn._id} className={`border-b ${isDarkMode ? 'border-gray-700 hover:bg-dark-700' : 'border-gray-100 hover:bg-gray-50'}`}>
+                      <td className={`py-4 px-4 ${isDarkMode ? 'text-white' : 'text-gray-900'} font-mono text-sm`}>{txn.transactionId}</td>
+                      <td className={`py-4 px-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{txn.userId?.firstName || txn.userId?.email}</td>
+                      <td className="py-4 px-4">
+                        <span className={`flex items-center gap-1 ${txn.type?.toUpperCase() === 'DEPOSIT' ? 'text-green-500' : 'text-red-500'}`}>
+                          {txn.type?.toUpperCase() === 'DEPOSIT' ? <ArrowDownRight size={14} /> : <ArrowUpRight size={14} />}
+                          {txn.type}
+                        </span>
+                      </td>
+                      <td className={`py-4 px-4 font-medium ${txn.type?.toUpperCase() === 'DEPOSIT' ? 'text-green-500' : 'text-red-500'}`}>
+                        {txn.type?.toUpperCase() === 'DEPOSIT' ? '+' : '-'}${(txn.amount || 0).toLocaleString()}
+                      </td>
+                      <td className={`py-4 px-4 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>{txn.paymentMethod || '-'}</td>
+                      <td className="py-4 px-4">
+                        <span className={`px-2 py-1 rounded-full text-xs ${getStatusColor(txn.status)}`}>
+                          {txn.status}
+                        </span>
+                      </td>
+                      <td className={`py-4 px-4 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>{new Date(txn.createdAt).toLocaleString()}</td>
+                      <td className="py-4 px-4">
+                        <div className="flex items-center gap-1">
+                          <button 
+                            onClick={() => viewTransactionDetails(txn)}
+                            className={`p-2 ${isDarkMode ? 'hover:bg-dark-600 hover:text-white' : 'hover:bg-gray-100 hover:text-gray-900'} rounded-lg transition-colors text-gray-500`}
+                          >
+                            <Eye size={16} />
+                          </button>
+                          {isPending(txn.status) && (
+                            <>
+                              <button onClick={() => handleApprove(txn)} className={`p-2 ${isDarkMode ? 'hover:bg-dark-600' : 'hover:bg-gray-100'} rounded-lg transition-colors text-gray-500 hover:text-green-500`}>
+                                <Check size={16} />
+                              </button>
+                              <button onClick={() => handleReject(txn)} className={`p-2 ${isDarkMode ? 'hover:bg-dark-600' : 'hover:bg-gray-100'} rounded-lg transition-colors text-gray-500 hover:text-red-500`}>
+                                <X size={16} />
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Transaction Details Modal */}
+      {showDetailsModal && selectedTxn && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-dark-800 rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-xl">
+            <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">Transaction Details</h2>
+              <button onClick={closeDetailsModal} className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
+                <X size={24} />
+              </button>
+            </div>
+            
+            <div className="p-6 space-y-6">
+              {/* Transaction Info */}
+              <div className="space-y-3">
+                <h3 className="text-gray-900 dark:text-white font-semibold flex items-center gap-2">
+                  {selectedTxn.type?.toLowerCase() === 'withdrawal' ? (
+                    <ArrowUpRight size={18} className="text-red-500" />
+                  ) : (
+                    <ArrowDownRight size={18} className="text-green-500" />
+                  )}
+                  {selectedTxn.type} Request
+                </h3>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <p className="text-gray-500">Amount</p>
+                    <p className={`text-lg font-bold ${selectedTxn.type?.toLowerCase() === 'deposit' ? 'text-green-500' : 'text-red-500'}`}>
+                      ${selectedTxn.amount?.toLocaleString()}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500">Status</p>
+                    <span className={`px-2 py-1 rounded-full text-xs ${getStatusColor(selectedTxn.status)}`}>
+                      {selectedTxn.status}
+                    </span>
+                  </div>
+                  <div>
+                    <p className="text-gray-500">Payment Method</p>
+                    <p className="text-gray-900 dark:text-white">{selectedTxn.paymentMethod || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500">Date</p>
+                    <p className="text-gray-900 dark:text-white">{new Date(selectedTxn.createdAt).toLocaleString()}</p>
+                  </div>
+                  {selectedTxn.transactionRef && (
+                    <div className="col-span-2">
+                      <p className="text-gray-500">Transaction Reference</p>
+                      <p className="text-gray-900 dark:text-white font-mono">{selectedTxn.transactionRef}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* User Info */}
+              <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+                <h3 className="text-gray-900 dark:text-white font-semibold mb-3">User Information</h3>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <p className="text-gray-500">Name</p>
+                    <p className="text-gray-900 dark:text-white">{userDetails?.firstName || selectedTxn.userId?.firstName || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500">Email</p>
+                    <p className="text-gray-900 dark:text-white">{userDetails?.email || selectedTxn.userId?.email || '-'}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Bank Details (for withdrawals) */}
+              {selectedTxn.type?.toLowerCase() === 'withdrawal' && (
+                <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+                  <h3 className="text-gray-900 dark:text-white font-semibold mb-3 flex items-center gap-2">
+                    <Building2 size={16} /> Bank Details
+                  </h3>
+                  {userDetails?.bankDetails?.accountNumber ? (
+                    <div className="bg-gray-50 dark:bg-dark-700 rounded-lg p-4 space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Bank Name</span>
+                        <span className="text-gray-900 dark:text-white">{userDetails.bankDetails.bankName || '-'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Account Holder</span>
+                        <span className="text-gray-900 dark:text-white">{userDetails.bankDetails.accountHolderName || '-'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Account Number</span>
+                        <span className="text-gray-900 dark:text-white font-mono">{userDetails.bankDetails.accountNumber || '-'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">IFSC Code</span>
+                        <span className="text-gray-900 dark:text-white font-mono">{userDetails.bankDetails.ifscCode || '-'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Branch</span>
+                        <span className="text-gray-900 dark:text-white">{userDetails.bankDetails.branchName || '-'}</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                      <p className="text-red-600 text-sm">⚠️ User has not added bank details</p>
+                    </div>
+                  )}
+
+                  {/* UPI Details */}
+                  <h3 className="text-gray-900 font-semibold mt-4 mb-3 flex items-center gap-2">
+                    <Smartphone size={16} /> UPI Details
+                  </h3>
+                  {userDetails?.upiId ? (
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-500">UPI ID</span>
+                        <span className="text-purple-600 font-mono">{userDetails.upiId}</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                      <p className="text-yellow-600 text-sm">⚠️ User has not added UPI ID</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Actions */}
+              {isPending(selectedTxn.status) && (
+                <div className="flex gap-3 pt-4 border-t border-gray-200">
+                  <button
+                    onClick={() => { handleReject(selectedTxn); closeDetailsModal(); }}
+                    className="flex-1 py-2 bg-red-500/20 text-red-500 rounded-lg hover:bg-red-500/30 flex items-center justify-center gap-2"
+                  >
+                    <X size={16} /> Reject
+                  </button>
+                  <button
+                    onClick={() => { handleApprove(selectedTxn); closeDetailsModal(); }}
+                    className="flex-1 py-2 bg-green-500/20 text-green-500 rounded-lg hover:bg-green-500/30 flex items-center justify-center gap-2"
+                  >
+                    <Check size={16} /> Approve
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </AdminLayout>
+  )
+}
+
+export default AdminFundManagement

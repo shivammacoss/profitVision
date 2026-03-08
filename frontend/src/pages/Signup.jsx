@@ -1,0 +1,437 @@
+import { useState, useRef, useEffect } from 'react'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { Mail, ChevronDown, Search, Eye, EyeOff } from 'lucide-react'
+import { useTheme } from '../context/ThemeContext'
+import logo from '../assets/logo.png'
+
+import { API_URL } from '../config/api'
+
+const countries = [
+  { code: '+91', name: 'India', flag: '🇮🇳' },
+  { code: '+1', name: 'United States', flag: '🇺🇸' },
+  { code: '+1', name: 'Canada', flag: '🇨🇦' },
+  { code: '+44', name: 'United Kingdom', flag: '🇬🇧' },
+  { code: '+61', name: 'Australia', flag: '🇦🇺' },
+  { code: '+49', name: 'Germany', flag: '🇩🇪' },
+  { code: '+33', name: 'France', flag: '🇫🇷' },
+  { code: '+81', name: 'Japan', flag: '🇯🇵' },
+  { code: '+86', name: 'China', flag: '🇨🇳' },
+  { code: '+55', name: 'Brazil', flag: '🇧🇷' },
+  { code: '+52', name: 'Mexico', flag: '🇲🇽' },
+  { code: '+34', name: 'Spain', flag: '🇪🇸' },
+  { code: '+39', name: 'Italy', flag: '🇮🇹' },
+  { code: '+7', name: 'Russia', flag: '🇷🇺' },
+  { code: '+82', name: 'South Korea', flag: '🇰🇷' },
+  { code: '+31', name: 'Netherlands', flag: '🇳🇱' },
+  { code: '+46', name: 'Sweden', flag: '🇸🇪' },
+  { code: '+41', name: 'Switzerland', flag: '🇨🇭' },
+  { code: '+65', name: 'Singapore', flag: '🇸🇬' },
+  { code: '+971', name: 'UAE', flag: '🇦🇪' },
+  { code: '+966', name: 'Saudi Arabia', flag: '🇸🇦' },
+  { code: '+27', name: 'South Africa', flag: '🇿🇦' },
+  { code: '+234', name: 'Nigeria', flag: '🇳🇬' },
+  { code: '+254', name: 'Kenya', flag: '🇰🇪' },
+  { code: '+62', name: 'Indonesia', flag: '🇮🇩' },
+  { code: '+60', name: 'Malaysia', flag: '🇲🇾' },
+  { code: '+63', name: 'Philippines', flag: '🇵🇭' },
+  { code: '+66', name: 'Thailand', flag: '🇹🇭' },
+  { code: '+84', name: 'Vietnam', flag: '🇻🇳' },
+  { code: '+92', name: 'Pakistan', flag: '🇵🇰' },
+  { code: '+880', name: 'Bangladesh', flag: '🇧🇩' },
+  { code: '+94', name: 'Sri Lanka', flag: '🇱🇰' },
+  { code: '+977', name: 'Nepal', flag: '🇳🇵' },
+]
+
+const Signup = () => {
+  const navigate = useNavigate()
+  const { isDarkMode } = useTheme()
+  const [searchParams] = useSearchParams()
+  const referralCode = searchParams.get('ref')
+  const [activeTab, setActiveTab] = useState('signup')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
+  const [showCountryDropdown, setShowCountryDropdown] = useState(false)
+  const [countrySearch, setCountrySearch] = useState('')
+  const [selectedCountry, setSelectedCountry] = useState(countries[0])
+  const dropdownRef = useRef(null)
+  const [showPassword, setShowPassword] = useState(false)
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
+  const [step, setStep] = useState('form') // 'form' or 'otp'
+  const [otp, setOtp] = useState('')
+  const [resendTimer, setResendTimer] = useState(0)
+  const [formData, setFormData] = useState({
+    firstName: '',
+    email: '',
+    phone: '',
+    countryCode: '+91',
+    password: ''
+  })
+  
+  // Detect mobile view
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768)
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
+  // Resend timer countdown
+  useEffect(() => {
+    if (resendTimer > 0) {
+      const timer = setTimeout(() => setResendTimer(resendTimer - 1), 1000)
+      return () => clearTimeout(timer)
+    }
+  }, [resendTimer])
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setShowCountryDropdown(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  const filteredCountries = countries.filter(country =>
+    country.name.toLowerCase().includes(countrySearch.toLowerCase()) ||
+    country.code.includes(countrySearch)
+  )
+
+  const handleCountrySelect = (country) => {
+    setSelectedCountry(country)
+    setFormData({ ...formData, countryCode: country.code })
+    setShowCountryDropdown(false)
+    setCountrySearch('')
+  }
+
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value })
+    setError('')
+  }
+
+  // Step 1: Send OTP
+  const handleSendOTP = async (e) => {
+    e.preventDefault()
+    setLoading(true)
+    setError('')
+    setSuccess('')
+    
+    try {
+      const response = await fetch(`${API_URL}/auth/send-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...formData,
+          referralCode: referralCode || undefined
+        })
+      })
+      
+      const data = await response.json()
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to send OTP')
+      }
+      
+      setSuccess('OTP sent to your email!')
+      setStep('otp')
+      setResendTimer(60) // 60 seconds cooldown
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Step 2: Verify OTP and complete registration
+  const handleVerifyOTP = async (e) => {
+    e.preventDefault()
+    setLoading(true)
+    setError('')
+    
+    try {
+      const response = await fetch(`${API_URL}/auth/verify-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: formData.email,
+          otp: otp
+        })
+      })
+      
+      const data = await response.json()
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'OTP verification failed')
+      }
+      
+      localStorage.setItem('token', data.token)
+      localStorage.setItem('user', JSON.stringify(data.user))
+      localStorage.setItem('isNewUser', 'true')
+      
+      // Also call register-referral API for backward compatibility
+      if (referralCode && data.user?._id) {
+        try {
+          await fetch(`${API_URL}/ib/register-referral`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userId: data.user._id,
+              referralCode: referralCode
+            })
+          })
+        } catch (refError) {
+          console.error('Error registering referral:', refError)
+        }
+      }
+      
+      if (isMobile) {
+        navigate('/mobile')
+      } else {
+        navigate('/dashboard')
+      }
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Resend OTP
+  const handleResendOTP = async () => {
+    if (resendTimer > 0) return
+    
+    setLoading(true)
+    setError('')
+    
+    try {
+      const response = await fetch(`${API_URL}/auth/send-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...formData,
+          referralCode: referralCode || undefined
+        })
+      })
+      
+      const data = await response.json()
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to resend OTP')
+      }
+      
+      setSuccess('OTP resent to your email!')
+      setResendTimer(60)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className={`min-h-screen ${isDarkMode ? 'bg-black' : 'bg-gray-100'} flex items-center justify-center p-4 sm:p-6 md:p-8 relative overflow-hidden`}>
+      {/* Background gradient effects */}
+      <div className="absolute bottom-0 left-0 w-96 h-96 bg-gradient-to-r from-cyan-500/20 to-transparent rounded-full blur-3xl" />
+      <div className="absolute bottom-0 right-0 w-96 h-96 bg-gradient-to-l from-orange-500/20 via-purple-500/20 to-transparent rounded-full blur-3xl" />
+      
+      {/* Modal */}
+      <div className={`relative ${isDarkMode ? 'bg-dark-700 border-gray-800' : 'bg-white border-gray-200 shadow-xl'} rounded-2xl p-6 sm:p-8 w-full max-w-md border mx-4 sm:mx-0`}>
+        {/* Logo */}
+        <div className="flex justify-center mb-6">
+          <img src={logo} alt="ProfitVisionFX" className="h-32 object-contain" />
+        </div>
+
+        {/* Tabs */}
+        <div className={`flex ${isDarkMode ? 'bg-dark-600' : 'bg-gray-100'} rounded-full p-1 w-fit mb-8`}>
+          <button
+            onClick={() => setActiveTab('signup')}
+            className={`px-6 py-2 rounded-full text-sm font-medium transition-colors ${
+              activeTab === 'signup' 
+                ? isDarkMode ? 'bg-dark-500 text-white' : 'bg-white text-gray-900 shadow-sm'
+                : isDarkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            Sign up
+          </button>
+          <Link
+            to="/user/login"
+            className={`px-6 py-2 rounded-full text-sm font-medium ${isDarkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900'} transition-colors`}
+          >
+            Sign in
+          </Link>
+        </div>
+
+        {/* Title */}
+        <h1 className={`text-2xl font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-6`}>
+          {step === 'form' ? 'Create an account' : 'Verify Email'}
+        </h1>
+
+        {step === 'form' ? (
+          <>
+            <form onSubmit={handleSendOTP} className="space-y-4">
+              <input
+                type="text"
+                name="firstName"
+                placeholder="Enter your name"
+                value={formData.firstName}
+                onChange={handleChange}
+                required
+                className={`w-full ${isDarkMode ? 'bg-dark-600 border-gray-700 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'} border rounded-lg px-4 py-3 placeholder-gray-500 focus:outline-none focus:border-gray-600 transition-colors`}
+              />
+
+              <div className="relative">
+                <Mail size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
+                <input
+                  type="email"
+                  name="email"
+                  placeholder="Enter your email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  required
+                  className={`w-full ${isDarkMode ? 'bg-dark-600 border-gray-700 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'} border rounded-lg pl-11 pr-4 py-3 placeholder-gray-500 focus:outline-none focus:border-gray-600 transition-colors`}
+                />
+              </div>
+
+              <div className="flex relative" ref={dropdownRef}>
+                <button
+                  type="button"
+                  onClick={() => setShowCountryDropdown(!showCountryDropdown)}
+                  className={`flex items-center gap-1 sm:gap-2 ${isDarkMode ? 'bg-dark-600 border-gray-700 hover:bg-dark-500' : 'bg-gray-50 border-gray-300 hover:bg-gray-100'} border rounded-l-lg px-2 sm:px-3 py-3 border-r-0 transition-colors min-w-[70px] sm:min-w-[90px]`}
+                >
+                  <span className="text-base sm:text-lg">{selectedCountry.flag}</span>
+                  <span className="text-gray-400 text-xs sm:text-sm hidden sm:inline">{selectedCountry.code}</span>
+                  <ChevronDown size={14} className="text-gray-500" />
+                </button>
+                
+                {showCountryDropdown && (
+                  <div className={`absolute top-full left-0 mt-1 w-64 sm:w-72 ${isDarkMode ? 'bg-dark-600 border-gray-700' : 'bg-white border-gray-200'} border rounded-lg shadow-xl z-50 max-h-64 overflow-hidden`}>
+                    <div className={`p-2 border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+                      <div className="relative">
+                        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+                        <input
+                          type="text"
+                          placeholder="Search country..."
+                          value={countrySearch}
+                          onChange={(e) => setCountrySearch(e.target.value)}
+                          className={`w-full ${isDarkMode ? 'bg-dark-700 border-gray-700 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'} border rounded-lg pl-9 pr-3 py-2 text-sm placeholder-gray-500 focus:outline-none focus:border-gray-600`}
+                        />
+                      </div>
+                    </div>
+                    <div className="max-h-48 overflow-y-auto">
+                      {filteredCountries.map((country, index) => (
+                        <button
+                          key={`${country.code}-${index}`}
+                          type="button"
+                          onClick={() => handleCountrySelect(country)}
+                          className={`w-full flex items-center gap-3 px-3 py-2 ${isDarkMode ? 'hover:bg-dark-500' : 'hover:bg-gray-100'} transition-colors text-left`}
+                        >
+                          <span className="text-lg">{country.flag}</span>
+                          <span className={`${isDarkMode ? 'text-white' : 'text-gray-900'} text-sm flex-1`}>{country.name}</span>
+                          <span className="text-gray-500 text-sm">{country.code}</span>
+                        </button>
+                      ))}
+                      {filteredCountries.length === 0 && (
+                        <p className="text-gray-500 text-sm text-center py-3">No countries found</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+                
+                <input
+                  type="tel"
+                  name="phone"
+                  placeholder="Enter phone number (optional)"
+                  value={formData.phone}
+                  onChange={handleChange}
+                  className={`flex-1 ${isDarkMode ? 'bg-dark-600 border-gray-700 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'} border rounded-r-lg px-3 sm:px-4 py-3 placeholder-gray-500 focus:outline-none focus:border-gray-600 transition-colors min-w-0`}
+                />
+              </div>
+
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  name="password"
+                  placeholder="Create password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  required
+                  className={`w-full ${isDarkMode ? 'bg-dark-600 border-gray-700 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'} border rounded-lg px-4 py-3 pr-12 placeholder-gray-500 focus:outline-none focus:border-gray-600 transition-colors`}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors"
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+
+              {error && <p className="text-red-500 text-sm">{error}</p>}
+              {success && <p className="text-green-500 text-sm">{success}</p>}
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-white text-black font-medium py-3 rounded-lg hover:bg-gray-100 transition-colors mt-2 disabled:opacity-50"
+              >
+                {loading ? 'Sending OTP...' : 'Continue'}
+              </button>
+            </form>
+
+            <p className="text-center text-gray-500 text-sm mt-6">
+              By creating an account, you agree to our{' '}
+              <a href="#" className={`${isDarkMode ? 'text-white' : 'text-gray-900'} hover:underline`}>Terms & Service</a>
+            </p>
+          </>
+        ) : (
+          <form onSubmit={handleVerifyOTP} className="space-y-4">
+            <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-600'} text-sm mb-4`}>
+              We've sent a 6-digit OTP to <strong className={isDarkMode ? 'text-white' : 'text-gray-900'}>{formData.email}</strong>
+            </p>
+
+            <input
+              type="text"
+              placeholder="Enter 6-digit OTP"
+              value={otp}
+              onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+              maxLength={6}
+              className={`w-full ${isDarkMode ? 'bg-dark-600 border-gray-700 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'} border rounded-lg px-4 py-3 text-center text-2xl tracking-widest placeholder-gray-500 focus:outline-none focus:border-gray-600 transition-colors`}
+            />
+
+            {error && <p className="text-red-500 text-sm">{error}</p>}
+            {success && <p className="text-green-500 text-sm">{success}</p>}
+
+            <button
+              type="submit"
+              disabled={loading || otp.length !== 6}
+              className="w-full bg-white text-black font-medium py-3 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50"
+            >
+              {loading ? 'Verifying...' : 'Verify & Create Account'}
+            </button>
+
+            <div className="flex items-center justify-between text-sm">
+              <button
+                type="button"
+                onClick={() => { setStep('form'); setOtp(''); setError(''); }}
+                className={`${isDarkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900'}`}
+              >
+                ← Back
+              </button>
+              <button
+                type="button"
+                onClick={handleResendOTP}
+                disabled={resendTimer > 0 || loading}
+                className={`${resendTimer > 0 ? 'text-gray-500' : isDarkMode ? 'text-white hover:underline' : 'text-gray-900 hover:underline'}`}
+              >
+                {resendTimer > 0 ? `Resend in ${resendTimer}s` : 'Resend OTP'}
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
+    </div>
+  )
+}
+
+export default Signup

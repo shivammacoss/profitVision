@@ -1,0 +1,150 @@
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { Mail, Lock, Eye, EyeOff } from 'lucide-react'
+import { useTheme } from '../context/ThemeContext'
+import logo from '../assets/logo.png'
+
+import { API_URL } from '../config/api'
+
+const AdminLogin = () => {
+  const navigate = useNavigate()
+  const { isDarkMode } = useTheme()
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [formData, setFormData] = useState({
+    email: '',
+    password: ''
+  })
+
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value })
+    setError('')
+  }
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    setLoading(true)
+    setError('')
+    
+    console.log('Login attempt with:', formData)
+    console.log('API URL:', `${API_URL}/super-admin/login`)
+    
+    try {
+      const response = await fetch(`${API_URL}/super-admin/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      })
+      
+      console.log('Response status:', response.status)
+      const data = await response.json()
+      console.log('Response data:', data)
+      
+      if (data.success) {
+        console.log('Saving token to localStorage...')
+        try {
+          localStorage.setItem('adminToken', data.token)
+          localStorage.setItem('adminUser', JSON.stringify(data.admin))
+          console.log('Token saved:', localStorage.getItem('adminToken') ? 'YES' : 'NO')
+        } catch (storageErr) {
+          console.error('localStorage error:', storageErr)
+        }
+        navigate('/admin/dashboard')
+      } else {
+        setError(data.message || 'Invalid admin credentials')
+      }
+    } catch (err) {
+      console.error('Login error:', err)
+      setError('Connection error. Please try again.')
+    }
+    setLoading(false)
+  }
+
+  return (
+    <div className={`min-h-screen ${isDarkMode ? 'bg-black' : 'bg-gray-100'} flex items-center justify-center p-4 sm:p-6 md:p-8 relative overflow-hidden`}>
+      {/* Background gradient effects */}
+      <div className="absolute bottom-0 left-0 w-96 h-96 bg-gradient-to-r from-red-500/20 to-transparent rounded-full blur-3xl" />
+      <div className="absolute bottom-0 right-0 w-96 h-96 bg-gradient-to-l from-purple-500/20 via-red-500/20 to-transparent rounded-full blur-3xl" />
+      
+      {/* Modal */}
+      <div className={`relative ${isDarkMode ? 'bg-dark-700 border-gray-800' : 'bg-white border-gray-200 shadow-xl'} rounded-2xl p-6 sm:p-8 w-full max-w-md border mx-4 sm:mx-0`}>
+        {/* Logo */}
+        <div className="flex justify-center mb-6">
+          <img src={logo} alt="ProfitVisionFX" className="h-32 object-contain" />
+        </div>
+
+        {/* Admin Badge */}
+        <div className="flex items-center gap-2 mb-6">
+          <div className="px-3 py-1 bg-red-500/20 text-red-500 rounded-full text-sm font-medium">
+            Admin Portal
+          </div>
+        </div>
+
+        {/* Title */}
+        <h1 className={`text-2xl font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-2`}>Admin Login</h1>
+        <p className="text-gray-500 text-sm mb-6">Enter your admin credentials to continue</p>
+
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Email field */}
+          <div className="relative">
+            <Mail size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
+            <input
+              type="email"
+              name="email"
+              placeholder="Admin email"
+              value={formData.email}
+              onChange={handleChange}
+              className={`w-full ${isDarkMode ? 'bg-dark-600 border-gray-700 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'} border rounded-lg pl-11 pr-4 py-3 placeholder-gray-500 focus:outline-none focus:border-red-500/50 transition-colors`}
+            />
+          </div>
+
+          {/* Password field */}
+          <div className="relative">
+            <Lock size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
+            <input
+              type={showPassword ? 'text' : 'password'}
+              name="password"
+              placeholder="Admin password"
+              value={formData.password}
+              onChange={handleChange}
+              className={`w-full ${isDarkMode ? 'bg-dark-600 border-gray-700 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'} border rounded-lg pl-11 pr-12 py-3 placeholder-gray-500 focus:outline-none focus:border-red-500/50 transition-colors`}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors"
+            >
+              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+            </button>
+          </div>
+
+          {/* Error message */}
+          {error && (
+            <p className="text-red-500 text-sm">{error}</p>
+          )}
+
+          {/* Submit button */}
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-red-500 text-white font-medium py-3 rounded-lg hover:bg-red-600 transition-colors mt-2 disabled:opacity-50"
+          >
+            {loading ? 'Signing in...' : 'Sign in as Admin'}
+          </button>
+        </form>
+
+        {/* Info */}
+        <p className="text-center text-gray-500 text-sm mt-6">
+          Not an admin?{' '}
+          <button onClick={() => navigate('/user/login')} className={`${isDarkMode ? 'text-white' : 'text-gray-900'} hover:underline`}>
+            User Login
+          </button>
+        </p>
+      </div>
+    </div>
+  )
+}
+
+export default AdminLogin
