@@ -246,7 +246,7 @@ const AdminForexCharges = () => {
             </div>
             <button 
               onClick={() => { resetForm(); setEditingCharge(null); setModalType('commission') }}
-              className="flex items-center gap-2 px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors"
+              className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
             >
               <Plus size={16} />
               <span>Add Commission</span>
@@ -293,7 +293,7 @@ const AdminForexCharges = () => {
             </div>
             <button 
               onClick={() => { resetForm(); setEditingCharge(null); setModalType('spread') }}
-              className="flex items-center gap-2 px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors"
+              className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
             >
               <Plus size={16} />
               <span>Add Spread</span>
@@ -340,7 +340,7 @@ const AdminForexCharges = () => {
             </div>
             <button 
               onClick={() => { resetForm(); setEditingCharge(null); setModalType('swap') }}
-              className="flex items-center gap-2 px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors"
+              className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
             >
               <Plus size={16} />
               <span>Add Swap</span>
@@ -538,7 +538,7 @@ const AdminForexCharges = () => {
               
               <div className="flex gap-3 pt-2">
                 <button onClick={() => setModalType(null)} className="flex-1 py-2 bg-dark-700 hover:bg-dark-600 text-white rounded-lg text-sm">Cancel</button>
-                <button onClick={handleSave} className="flex-1 py-2 bg-white text-black hover:bg-gray-200 rounded-lg text-sm font-medium">Save</button>
+                <button onClick={handleSave} className="flex-1 py-2 bg-red-500 text-white hover:bg-red-600 rounded-lg text-sm font-medium">Save</button>
               </div>
             </div>
           </div>
@@ -689,7 +689,7 @@ const AdminForexCharges = () => {
               
               <div className="flex gap-3 pt-2">
                 <button onClick={() => setModalType(null)} className="flex-1 py-2 bg-dark-700 hover:bg-dark-600 text-white rounded-lg text-sm">Cancel</button>
-                <button onClick={handleSave} className="flex-1 py-2 bg-white text-black hover:bg-gray-200 rounded-lg text-sm font-medium">Save</button>
+                <button onClick={handleSave} className="flex-1 py-2 bg-red-500 text-white hover:bg-red-600 rounded-lg text-sm font-medium">Save</button>
               </div>
             </div>
           </div>
@@ -837,7 +837,7 @@ const AdminForexCharges = () => {
               
               <div className="flex gap-3 pt-2">
                 <button onClick={() => setModalType(null)} className="flex-1 py-2 bg-dark-700 hover:bg-dark-600 text-white rounded-lg text-sm">Cancel</button>
-                <button onClick={handleSave} className="flex-1 py-2 bg-white text-black hover:bg-gray-200 rounded-lg text-sm font-medium">Save</button>
+                <button onClick={handleSave} className="flex-1 py-2 bg-red-500 text-white hover:bg-red-600 rounded-lg text-sm font-medium">Save</button>
               </div>
             </div>
           </div>

@@ -955,19 +955,19 @@ const AdminBankSettings = () => {
       {/* Add/Edit Modal */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-xl border border-gray-200">
-            <div className="p-6 border-b border-gray-200 flex items-center justify-between">
-              <h2 className="text-xl font-bold text-gray-900">
+          <div className="bg-dark-800 rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-xl border border-gray-700">
+            <div className="p-6 border-b border-gray-700 flex items-center justify-between">
+              <h2 className="text-xl font-bold text-white">
                 {editingMethod ? 'Edit Payment Method' : 'Add Payment Method'}
               </h2>
-              <button onClick={() => setShowAddModal(false)} className="text-gray-500 hover:text-gray-700">
+              <button onClick={() => setShowAddModal(false)} className="text-gray-400 hover:text-white">
                 <X size={24} />
               </button>
             </div>
             <div className="p-6 space-y-4">
               {/* Type Selection */}
               <div>
-                <label className="block text-gray-600 text-sm mb-2">Payment Type</label>
+                <label className="block text-gray-400 text-sm mb-2">Payment Type</label>
                 <div className="grid grid-cols-3 gap-2">
                   {['Bank Transfer', 'UPI', 'QR Code'].map((type) => (
                     <button
@@ -975,8 +975,8 @@ const AdminBankSettings = () => {
                       onClick={() => setForm({ ...form, type })}
                       className={`p-3 rounded-lg border text-sm font-medium ${
                         form.type === type 
-                          ? 'border-blue-500 bg-red-500 text-white' 
-                          : 'border-gray-300 text-gray-700 hover:border-gray-400'
+                          ? 'border-red-500 bg-red-500 text-white' 
+                          : 'border-gray-600 text-gray-300 hover:border-gray-500 bg-dark-700'
                       }`}
                     >
                       {type}
@@ -989,44 +989,44 @@ const AdminBankSettings = () => {
               {form.type === 'Bank Transfer' && (
                 <>
                   <div>
-                    <label className="block text-gray-600 text-sm mb-1">Bank Name</label>
+                    <label className="block text-gray-400 text-sm mb-1">Bank Name</label>
                     <input
                       type="text"
                       value={form.bankName}
                       onChange={(e) => setForm({ ...form, bankName: e.target.value })}
                       placeholder="e.g., HDFC Bank"
-                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500"
+                      className="w-full px-3 py-2 bg-dark-700 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-red-500"
                     />
                   </div>
                   <div>
-                    <label className="block text-gray-600 text-sm mb-1">Account Holder Name</label>
+                    <label className="block text-gray-400 text-sm mb-1">Account Holder Name</label>
                     <input
                       type="text"
                       value={form.accountHolderName}
                       onChange={(e) => setForm({ ...form, accountHolderName: e.target.value })}
                       placeholder="e.g., John Doe"
-                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500"
+                      className="w-full px-3 py-2 bg-dark-700 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-red-500"
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-gray-600 text-sm mb-1">Account Number</label>
+                      <label className="block text-gray-400 text-sm mb-1">Account Number</label>
                       <input
                         type="text"
                         value={form.accountNumber}
                         onChange={(e) => setForm({ ...form, accountNumber: e.target.value })}
                         placeholder="e.g., 1234567890"
-                        className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500"
+                        className="w-full px-3 py-2 bg-dark-700 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-red-500"
                       />
                     </div>
                     <div>
-                      <label className="block text-gray-600 text-sm mb-1">IFSC Code</label>
+                      <label className="block text-gray-400 text-sm mb-1">IFSC Code</label>
                       <input
                         type="text"
                         value={form.ifscCode}
                         onChange={(e) => setForm({ ...form, ifscCode: e.target.value })}
                         placeholder="e.g., HDFC0001234"
-                        className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500"
+                        className="w-full px-3 py-2 bg-dark-700 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-red-500"
                       />
                     </div>
                   </div>
@@ -1036,13 +1036,13 @@ const AdminBankSettings = () => {
               {/* UPI Fields */}
               {form.type === 'UPI' && (
                 <div>
-                  <label className="block text-gray-600 text-sm mb-1">UPI ID</label>
+                  <label className="block text-gray-400 text-sm mb-1">UPI ID</label>
                   <input
                     type="text"
                     value={form.upiId}
                     onChange={(e) => setForm({ ...form, upiId: e.target.value })}
                     placeholder="e.g., yourname@upi"
-                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500"
+                    className="w-full px-3 py-2 bg-dark-700 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-red-500"
                   />
                 </div>
               )}
@@ -1050,8 +1050,8 @@ const AdminBankSettings = () => {
               {/* QR Code Fields */}
               {form.type === 'QR Code' && (
                 <div>
-                  <label className="block text-gray-600 text-sm mb-2">QR Code Image</label>
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center bg-gray-50">
+                  <label className="block text-gray-400 text-sm mb-2">QR Code Image</label>
+                  <div className="border-2 border-dashed border-gray-600 rounded-lg p-6 text-center bg-dark-700">
                     {form.qrCodeImage ? (
                       <div className="space-y-3">
                         <img src={form.qrCodeImage} alt="QR Preview" className="w-32 h-32 mx-auto rounded-lg" />
@@ -1079,8 +1079,8 @@ const AdminBankSettings = () => {
               )}
 
               {/* Active Status */}
-              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
-                <span className="text-gray-700 font-medium">Active Status</span>
+              <div className="flex items-center justify-between p-3 bg-dark-700 rounded-lg border border-gray-600">
+                <span className="text-white font-medium">Active Status</span>
                 <button
                   onClick={() => setForm({ ...form, isActive: !form.isActive })}
                   className={`w-12 h-6 rounded-full transition-colors ${
@@ -1097,7 +1097,7 @@ const AdminBankSettings = () => {
               <div className="flex gap-3 pt-4">
                 <button
                   onClick={() => setShowAddModal(false)}
-                  className="flex-1 py-2.5 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg font-medium"
+                  className="flex-1 py-2.5 bg-dark-700 hover:bg-dark-600 text-gray-300 rounded-lg font-medium border border-gray-600"
                 >
                   Cancel
                 </button>

@@ -5,6 +5,7 @@ import User from '../models/User.js'
 import Admin from '../models/Admin.js'
 import OTP from '../models/OTP.js'
 import { generateOTP, sendOTPEmail, sendWelcomeEmail, sendPasswordResetOTP } from '../services/emailService.js'
+import referralEngine from '../services/referralEngine.js'
 
 import { JWT_SECRET } from '../config/jwt.js'
 
@@ -145,6 +146,17 @@ router.post('/verify-otp', async (req, res) => {
       await Admin.findByIdAndUpdate(assignedAdmin, { $inc: { 'stats.totalUsers': 1 } })
     }
 
+    // Process referral commission if user was referred
+    if (parentIBId) {
+      try {
+        console.log(`[Signup] Processing referral commission for new user ${user._id}`)
+        // Use referralEngine.processSignupCommission which uses IBModeSettings levelAmounts
+        await referralEngine.processSignupCommission(user._id)
+      } catch (refErr) {
+        console.error('[Signup] Referral commission error:', refErr.message)
+      }
+    }
+
     // Delete OTP record
     await OTP.deleteOne({ _id: otpRecord._id })
 
@@ -278,6 +290,17 @@ router.post('/signup', async (req, res) => {
     // Update admin stats if assigned
     if (assignedAdmin) {
       await Admin.findByIdAndUpdate(assignedAdmin, { $inc: { 'stats.totalUsers': 1 } })
+    }
+
+    // Process referral commission if user was referred
+    if (parentIBId) {
+      try {
+        console.log(`[Signup] Processing referral commission for new user ${user._id}`)
+        // Use referralEngine.processSignupCommission which uses IBModeSettings levelAmounts
+        await referralEngine.processSignupCommission(user._id)
+      } catch (refErr) {
+        console.error('[Signup] Referral commission error:', refErr.message)
+      }
     }
 
     // Send welcome email (async)

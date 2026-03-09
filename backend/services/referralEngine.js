@@ -3,6 +3,7 @@ import ReferralIncomePlan from '../models/ReferralIncomePlan.js'
 import DirectJoiningPlan from '../models/DirectJoiningPlan.js'
 import ReferralCommission from '../models/ReferralCommission.js'
 import IBWallet from '../models/IBWallet.js'
+import IBModeSettings from '../models/IBModeSettings.js'
 
 class ReferralEngine {
   constructor() {
@@ -209,6 +210,82 @@ class ReferralEngine {
 
       } catch (error) {
         console.error(`Error processing direct joining income level ${level}:`, error)
+      }
+    }
+
+    return {
+      processed: true,
+      commissionsGenerated: results.length,
+      totalDistributed: results.reduce((sum, r) => sum + r.amount, 0),
+      results
+    }
+  }
+
+  // Process signup commission - fixed amount from IBModeSettings.directJoiningIncome.levelAmounts
+  async processSignupCommission(newUserId) {
+    console.log(`[Referral] Processing signup commission for user ${newUserId}`)
+    
+    const settings = await IBModeSettings.getSettings()
+    
+    if (!settings.directJoiningIncome.enabled) {
+      console.log('[Referral] Direct joining income not enabled')
+      return { processed: false, reason: 'Direct joining income not enabled' }
+    }
+
+    const chain = await this.getReferralChain(newUserId, settings.directJoiningIncome.maxLevels)
+    
+    if (chain.length === 0) {
+      console.log('[Referral] No referral chain found for new user')
+      return { processed: false, reason: 'No referral chain' }
+    }
+
+    const results = []
+
+    for (const { user, level } of chain) {
+      try {
+        if (level > settings.directJoiningIncome.maxLevels) continue
+
+        // Get fixed amount from IBModeSettings levelAmounts
+        const commissionAmount = settings.getJoiningLevelAmount(level)
+        if (commissionAmount <= 0) continue
+
+        // Check for duplicate
+        const existingCommission = await ReferralCommission.findOne({
+          recipientUserId: user._id,
+          sourceUserId: newUserId,
+          commissionType: 'DIRECT_JOINING'
+        })
+        if (existingCommission) {
+          console.log(`[Referral] Commission already exists for user ${user._id} from ${newUserId}`)
+          continue
+        }
+
+        const commission = await ReferralCommission.create({
+          recipientUserId: user._id,
+          sourceUserId: newUserId,
+          tradeId: null,
+          level,
+          commissionType: 'DIRECT_JOINING',
+          baseAmount: 0,
+          rate: commissionAmount,
+          commissionAmount,
+          description: `Level ${level} signup commission: $${commissionAmount}`
+        })
+
+        const wallet = await IBWallet.getOrCreateWallet(user._id)
+        await wallet.creditDirectIncome(commissionAmount)
+
+        results.push({
+          userId: user._id,
+          userName: user.firstName,
+          level,
+          amount: commissionAmount
+        })
+
+        console.log(`[Referral] Signup Commission: Level ${level} - ${user.firstName} earned $${commissionAmount.toFixed(2)}`)
+
+      } catch (error) {
+        console.error(`[Referral] Error processing signup commission level ${level}:`, error)
       }
     }
 

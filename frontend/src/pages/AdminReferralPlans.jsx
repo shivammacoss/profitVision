@@ -121,15 +121,17 @@ const AdminReferralPlans = () => {
     setTimeout(() => setMessage({ type: '', text: '' }), 3000)
   }
 
-  const updateReferralLevel = (index, amount) => {
+  const updateReferralLevel = (index, value) => {
     const newLevels = [...referralPlan.levels]
-    newLevels[index] = { ...newLevels[index], amount: parseFloat(amount) || 0 }
+    // Allow empty string while typing, store as string for input control
+    newLevels[index] = { ...newLevels[index], amount: value === '' ? '' : (parseFloat(value) >= 0 ? parseFloat(value) : newLevels[index].amount) }
     setReferralPlan({ ...referralPlan, levels: newLevels })
   }
 
-  const updateJoiningLevel = (index, percentage) => {
+  const updateJoiningLevel = (index, value) => {
     const newLevels = [...joiningPlan.levels]
-    newLevels[index] = { ...newLevels[index], percentage: parseFloat(percentage) || 0 }
+    // Allow empty string while typing, store as string for input control
+    newLevels[index] = { ...newLevels[index], percentage: value === '' ? '' : (parseFloat(value) >= 0 ? parseFloat(value) : newLevels[index].percentage) }
     setJoiningPlan({ ...joiningPlan, levels: newLevels })
   }
 
@@ -213,11 +215,11 @@ const AdminReferralPlans = () => {
                   <div className="flex items-center gap-2">
                     <span className="text-gray-500">$</span>
                     <input
-                      type="number"
-                      step="0.1"
-                      min="0"
+                      type="text"
+                      inputMode="decimal"
                       value={level.amount}
                       onChange={(e) => updateReferralLevel(index, e.target.value)}
+                      onBlur={(e) => updateReferralLevel(index, e.target.value === '' ? '0' : e.target.value)}
                       className="w-full px-3 py-2 bg-dark-600 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-accent-green"
                     />
                   </div>
@@ -303,12 +305,11 @@ const AdminReferralPlans = () => {
                   </label>
                   <div className="flex items-center gap-2">
                     <input
-                      type="number"
-                      step="0.5"
-                      min="0"
-                      max="100"
+                      type="text"
+                      inputMode="decimal"
                       value={level.percentage}
                       onChange={(e) => updateJoiningLevel(index, e.target.value)}
+                      onBlur={(e) => updateJoiningLevel(index, e.target.value === '' ? '0' : e.target.value)}
                       className="w-full px-3 py-2 bg-dark-600 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-accent-green"
                     />
                     <span className="text-gray-500">%</span>
@@ -321,7 +322,7 @@ const AdminReferralPlans = () => {
               <div className="text-gray-400">
                 <span className="font-medium text-white">{joiningPlan.levels.length}</span> levels |
                 <span className="font-medium text-white ml-2">
-                  {joiningPlan.levels.reduce((sum, l) => sum + l.percentage, 0).toFixed(1)}%
+                  {joiningPlan.levels.reduce((sum, l) => sum + (parseFloat(l.percentage) || 0), 0).toFixed(1)}%
                 </span> total distribution
               </div>
               <button

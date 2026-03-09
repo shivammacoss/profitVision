@@ -261,61 +261,61 @@ const AdminAccountTypes = () => {
       {/* Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl p-4 sm:p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto border border-gray-200 shadow-xl">
+          <div className="bg-dark-800 rounded-xl p-4 sm:p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto border border-gray-700 shadow-xl">
             <div className="flex items-center justify-between mb-4 sm:mb-6">
-              <h3 className="text-gray-900 font-semibold text-base sm:text-lg">
+              <h3 className="text-white font-semibold text-base sm:text-lg">
                 {editingType ? 'Edit Account Type' : 'Create Account Type'}
               </h3>
-              <button onClick={() => { setShowModal(false); resetForm(); }} className="text-gray-500 hover:text-gray-700">
+              <button onClick={() => { setShowModal(false); resetForm(); }} className="text-gray-400 hover:text-white">
                 <X size={20} />
               </button>
             </div>
 
             <div className="space-y-3 sm:space-y-4">
               <div>
-                <label className="block text-gray-600 text-sm mb-2">Account Name *</label>
+                <label className="block text-gray-400 text-sm mb-2">Account Name *</label>
                 <input
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   placeholder="e.g., Standard, Premium, VIP"
-                  className="w-full bg-white border border-gray-300 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500"
+                  className="w-full bg-dark-700 border border-gray-600 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 text-white placeholder-gray-500 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500"
                 />
               </div>
 
               <div>
-                <label className="block text-gray-600 text-sm mb-2">Description</label>
+                <label className="block text-gray-400 text-sm mb-2">Description</label>
                 <textarea
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   placeholder="Account type description"
                   rows={2}
-                  className="w-full bg-white border border-gray-300 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500"
+                  className="w-full bg-dark-700 border border-gray-600 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 text-white placeholder-gray-500 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500"
                 />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div>
-                  <label className="block text-gray-600 text-sm mb-2">Min Deposit ($) *</label>
+                  <label className="block text-gray-400 text-sm mb-2">Min Deposit ($) *</label>
                   <input
                     type="number"
                     value={formData.minDeposit}
                     onChange={(e) => setFormData({ ...formData, minDeposit: e.target.value })}
                     placeholder="100"
-                    className="w-full bg-white border border-gray-300 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500"
+                    className="w-full bg-dark-700 border border-gray-600 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 text-white placeholder-gray-500 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-gray-600 text-sm mb-2">Leverage *</label>
+                  <label className="block text-gray-400 text-sm mb-2">Leverage *</label>
                   <div className="flex items-center gap-2">
-                    <span className="text-gray-800">1:</span>
+                    <span className="text-white">1:</span>
                     <input
                       type="number"
                       min="1"
                       value={formData.leverage.replace('1:', '')}
                       onChange={(e) => setFormData({ ...formData, leverage: `1:${e.target.value}` })}
                       placeholder="100"
-                      className="flex-1 bg-white border border-gray-300 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500"
+                      className="flex-1 bg-dark-700 border border-gray-600 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 text-white placeholder-gray-500 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500"
                     />
                   </div>
                   <p className="text-gray-500 text-xs mt-1">e.g., 100, 500, 1000</p>
@@ -323,48 +323,48 @@ const AdminAccountTypes = () => {
               </div>
 
               <div>
-                <label className="block text-gray-600 text-sm mb-2">Exposure Limit ($)</label>
+                <label className="block text-gray-400 text-sm mb-2">Exposure Limit ($)</label>
                 <input
                   type="number"
                   value={formData.exposureLimit}
                   onChange={(e) => setFormData({ ...formData, exposureLimit: e.target.value })}
                   placeholder="0 for unlimited"
-                  className="w-full bg-white border border-gray-300 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500"
+                  className="w-full bg-dark-700 border border-gray-600 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 text-white placeholder-gray-500 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500"
                 />
               </div>
 
               {/* Min Spread and Commission */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div>
-                  <label className="block text-gray-600 text-sm mb-2">Min Spread (pips)</label>
+                  <label className="block text-gray-400 text-sm mb-2">Min Spread (pips)</label>
                   <input
                     type="number"
                     step="0.1"
                     value={formData.minSpread}
                     onChange={(e) => setFormData({ ...formData, minSpread: e.target.value })}
                     placeholder="0"
-                    className="w-full bg-white border border-gray-300 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500"
+                    className="w-full bg-dark-700 border border-gray-600 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 text-white placeholder-gray-500 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-gray-600 text-sm mb-2">Commission ($)</label>
+                  <label className="block text-gray-400 text-sm mb-2">Commission ($)</label>
                   <input
                     type="number"
                     step="0.01"
                     value={formData.commission}
                     onChange={(e) => setFormData({ ...formData, commission: e.target.value })}
                     placeholder="0"
-                    className="w-full bg-white border border-gray-300 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500"
+                    className="w-full bg-dark-700 border border-gray-600 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 text-white placeholder-gray-500 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500"
                   />
                 </div>
               </div>
 
               {/* Demo Account Toggle */}
-              <div className="bg-gray-100 rounded-lg p-3 sm:p-4 border border-gray-300">
+              <div className="bg-dark-700 rounded-lg p-3 sm:p-4 border border-gray-600">
                 <div className="flex items-center justify-between">
                   <div>
-                    <label className="text-gray-800 font-medium text-sm sm:text-base">Demo Account</label>
-                    <p className="text-gray-500 text-xs mt-1">Enable for practice accounts</p>
+                    <label className="text-white font-medium text-sm sm:text-base">Demo Account</label>
+                    <p className="text-gray-400 text-xs mt-1">Enable for practice accounts</p>
                   </div>
                   <button
                     type="button"
@@ -376,14 +376,14 @@ const AdminAccountTypes = () => {
                 </div>
                 
                 {formData.isDemo && (
-                  <div className="mt-3 pt-3 border-t border-gray-300">
-                    <label className="block text-gray-600 text-sm mb-2">Demo Balance ($)</label>
+                  <div className="mt-3 pt-3 border-t border-gray-600">
+                    <label className="block text-gray-400 text-sm mb-2">Demo Balance ($)</label>
                     <input
                       type="number"
                       value={formData.demoBalance}
                       onChange={(e) => setFormData({ ...formData, demoBalance: e.target.value })}
                       placeholder="10000"
-                      className="w-full bg-white border border-gray-300 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500"
+                      className="w-full bg-dark-600 border border-gray-500 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 text-white placeholder-gray-500 focus:outline-none focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500"
                     />
                   </div>
                 )}
@@ -395,7 +395,7 @@ const AdminAccountTypes = () => {
             <div className="flex gap-3 mt-4 sm:mt-6">
               <button
                 onClick={() => { setShowModal(false); resetForm(); }}
-                className="flex-1 bg-gray-200 text-gray-800 py-2.5 sm:py-3 rounded-lg hover:bg-gray-300 transition-colors text-sm sm:text-base"
+                className="flex-1 bg-dark-700 text-gray-300 py-2.5 sm:py-3 rounded-lg hover:bg-dark-600 transition-colors text-sm sm:text-base border border-gray-600"
               >
                 Cancel
               </button>

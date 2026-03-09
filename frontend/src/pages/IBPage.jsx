@@ -21,12 +21,14 @@ const IBPage = () => {
   const [downline, setDownline] = useState([])
   const [loading, setLoading] = useState(true)
   const [applying, setApplying] = useState(false)
-  const [withdrawAmount, setWithdrawAmount] = useState('')
+  const [directWithdrawAmount, setDirectWithdrawAmount] = useState('')
+  const [referralWithdrawAmount, setReferralWithdrawAmount] = useState('')
   const [challengeModeEnabled, setChallengeModeEnabled] = useState(false)
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
   const [levelProgress, setLevelProgress] = useState(null)
   const [entryFeeSettings, setEntryFeeSettings] = useState({ entryFeeEnabled: false, entryFee: 0 })
   const [eligibility, setEligibility] = useState(null)
+  const [dailyIncome, setDailyIncome] = useState([])
 
   const user = JSON.parse(localStorage.getItem('user') || '{}')
 
@@ -107,14 +109,15 @@ const IBPage = () => {
       const res = await fetch(`${API_URL}/ib/my-profile/${user._id}`)
       const data = await res.json()
       if (data.ibUser) {
-        // Merge ibUser, wallet, and stats into one profile object
+        // Merge ibUser, wallet, stats, and income breakdown into one profile object
         setIbProfile({
           ...data.ibUser,
           ibWalletBalance: data.wallet?.balance || 0,
           totalCommissionEarned: data.wallet?.totalEarned || 0,
           pendingWithdrawal: data.wallet?.pendingWithdrawal || 0,
           totalWithdrawn: data.wallet?.totalWithdrawn || 0,
-          stats: data.stats || {}
+          stats: data.stats || {},
+          incomeBreakdown: data.incomeBreakdown || { directJoining: { total: 0 }, referralIncome: { total: 0 } }
         })
         // Set level progress data
         if (data.levelProgress) {
@@ -125,6 +128,7 @@ const IBPage = () => {
           fetchReferrals()
           fetchCommissions()
           fetchDownline()
+          fetchDailyIncome()
         }
       }
     } catch (error) {
@@ -161,6 +165,18 @@ const IBPage = () => {
       setDownline(data.tree?.downlines || [])
     } catch (error) {
       console.error('Error fetching downline:', error)
+    }
+  }
+
+  const fetchDailyIncome = async () => {
+    try {
+      const res = await fetch(`${API_URL}/ib/daily-income/${user._id}?days=30`)
+      const data = await res.json()
+      if (data.success) {
+        setDailyIncome(data.dailyBreakdown || [])
+      }
+    } catch (error) {
+      console.error('Error fetching daily income:', error)
     }
   }
 
@@ -234,6 +250,41 @@ const IBPage = () => {
       if (data.status) {
         alert(data.message)
         setWithdrawAmount('')
+        fetchIBProfile()
+      } else {
+        alert(data.message || 'Failed to withdraw')
+      }
+    } catch (error) {
+      console.error('Error withdrawing:', error)
+      alert('Failed to process withdrawal')
+    }
+  }
+
+  const handleWithdrawType = async (type) => {
+    const amount = type === 'direct' ? directWithdrawAmount : referralWithdrawAmount
+    if (!amount || parseFloat(amount) <= 0) {
+      alert('Please enter a valid amount')
+      return
+    }
+
+    try {
+      const endpoint = type === 'direct' ? '/ib/withdraw/direct' : '/ib/withdraw/referral'
+      const res = await fetch(`${API_URL}${endpoint}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user._id,
+          amount: parseFloat(amount)
+        })
+      })
+      const data = await res.json()
+      if (data.success) {
+        alert(data.message)
+        if (type === 'direct') {
+          setDirectWithdrawAmount('')
+        } else {
+          setReferralWithdrawAmount('')
+        }
         fetchIBProfile()
       } else {
         alert(data.message || 'Failed to withdraw')
@@ -463,7 +514,7 @@ const IBPage = () => {
           ) : (
             /* Active IB Dashboard */
             <div>
-              {/* Stats Cards */}
+              {/* Stats Cards - Row 1: Balance & Earnings */}
               <div className={`grid ${isMobile ? 'grid-cols-2 gap-3' : 'grid-cols-4 gap-4'} mb-4`}>
                 <div className={`${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'} rounded-xl ${isMobile ? 'p-3' : 'p-5'} border`}>
                   <div className="flex items-center gap-2 mb-2">
@@ -476,13 +527,35 @@ const IBPage = () => {
                 </div>
                 <div className={`${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'} rounded-xl ${isMobile ? 'p-3' : 'p-5'} border`}>
                   <div className="flex items-center gap-2 mb-2">
-                    <div className={`${isMobile ? 'w-8 h-8' : 'w-10 h-10'} bg-red-500/20 rounded-lg flex items-center justify-center`}>
+                    <div className={`${isMobile ? 'w-8 h-8' : 'w-10 h-10'} bg-blue-500/20 rounded-lg flex items-center justify-center`}>
                       <TrendingUp size={isMobile ? 16 : 20} className="text-blue-500" />
                     </div>
                   </div>
                   <p className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>Total Earned</p>
                   <p className={`font-bold ${isMobile ? 'text-lg' : 'text-2xl'} ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>${ibProfile.totalCommissionEarned?.toFixed(2) || '0.00'}</p>
                 </div>
+                <div className={`${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'} rounded-xl ${isMobile ? 'p-3' : 'p-5'} border`}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className={`${isMobile ? 'w-8 h-8' : 'w-10 h-10'} bg-cyan-500/20 rounded-lg flex items-center justify-center`}>
+                      <UserPlus size={isMobile ? 16 : 20} className="text-cyan-500" />
+                    </div>
+                  </div>
+                  <p className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>Direct Income</p>
+                  <p className={`font-bold ${isMobile ? 'text-lg' : 'text-2xl'} ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>${ibProfile.incomeBreakdown?.directJoining?.total?.toFixed(2) || '0.00'}</p>
+                </div>
+                <div className={`${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'} rounded-xl ${isMobile ? 'p-3' : 'p-5'} border`}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className={`${isMobile ? 'w-8 h-8' : 'w-10 h-10'} bg-yellow-500/20 rounded-lg flex items-center justify-center`}>
+                      <TrendingUp size={isMobile ? 16 : 20} className="text-yellow-500" />
+                    </div>
+                  </div>
+                  <p className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>Referral Income</p>
+                  <p className={`font-bold ${isMobile ? 'text-lg' : 'text-2xl'} ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>${ibProfile.incomeBreakdown?.referralIncome?.total?.toFixed(2) || '0.00'}</p>
+                </div>
+              </div>
+
+              {/* Stats Cards - Row 2: Referrals & Downline */}
+              <div className={`grid ${isMobile ? 'grid-cols-2 gap-3' : 'grid-cols-2 gap-4'} mb-4`}>
                 <div className={`${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'} rounded-xl ${isMobile ? 'p-3' : 'p-5'} border`}>
                   <div className="flex items-center gap-2 mb-2">
                     <div className={`${isMobile ? 'w-8 h-8' : 'w-10 h-10'} bg-purple-500/20 rounded-lg flex items-center justify-center`}>
@@ -495,7 +568,7 @@ const IBPage = () => {
                 <div className={`${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'} rounded-xl ${isMobile ? 'p-3' : 'p-5'} border`}>
                   <div className="flex items-center gap-2 mb-2">
                     <div className={`${isMobile ? 'w-8 h-8' : 'w-10 h-10'} bg-orange-500/20 rounded-lg flex items-center justify-center`}>
-                      <UserPlus size={isMobile ? 16 : 20} className="text-orange-500" />
+                      <Users size={isMobile ? 16 : 20} className="text-orange-500" />
                     </div>
                   </div>
                   <p className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>Total Downline</p>
@@ -689,7 +762,7 @@ const IBPage = () => {
 
               {/* Tabs */}
               <div className={`flex ${isMobile ? 'gap-1 overflow-x-auto pb-2' : 'gap-4'} mb-4`}>
-                {['overview', 'referrals', 'commissions', 'downline', 'withdraw'].map(tab => (
+                {['overview', 'referrals', 'commissions', 'daily-earnings', 'downline', 'withdraw'].map(tab => (
                   <button
                     key={tab}
                     onClick={() => setActiveTab(tab)}
@@ -888,6 +961,73 @@ const IBPage = () => {
                 </div>
               )}
 
+              {activeTab === 'daily-earnings' && (
+                <div className="space-y-4">
+                  {/* Summary */}
+                  <div className={`grid ${isMobile ? 'grid-cols-2' : 'grid-cols-3'} gap-3`}>
+                    <div className={`${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'} rounded-xl p-4 border`}>
+                      <p className="text-gray-500 text-xs mb-1">Total (30 Days)</p>
+                      <p className="text-accent-green text-xl font-bold">
+                        ${dailyIncome.reduce((sum, d) => sum + (d.total || 0), 0).toFixed(2)}
+                      </p>
+                    </div>
+                    <div className={`${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'} rounded-xl p-4 border`}>
+                      <p className="text-gray-500 text-xs mb-1">Direct Income</p>
+                      <p className="text-cyan-400 text-xl font-bold">
+                        ${dailyIncome.reduce((sum, d) => sum + (d.directJoining || 0), 0).toFixed(2)}
+                      </p>
+                    </div>
+                    <div className={`${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'} rounded-xl p-4 border`}>
+                      <p className="text-gray-500 text-xs mb-1">Referral Income</p>
+                      <p className="text-yellow-400 text-xl font-bold">
+                        ${dailyIncome.reduce((sum, d) => sum + (d.referralIncome || 0), 0).toFixed(2)}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Daily Breakdown Table */}
+                  <div className={`${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'} rounded-xl border overflow-hidden`}>
+                    <div className="p-4 border-b border-gray-700">
+                      <h3 className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Daily Earnings (Last 30 Days)</h3>
+                    </div>
+                    {dailyIncome.length === 0 ? (
+                      <div className="text-center py-8 text-gray-500 text-sm">No earnings yet</div>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <table className="w-full">
+                          <thead>
+                            <tr className={`text-left text-sm ${isDarkMode ? 'text-gray-400 border-gray-700' : 'text-gray-600 border-gray-200'} border-b`}>
+                              <th className="px-4 py-3 font-medium">Date</th>
+                              <th className="px-4 py-3 font-medium text-right">Direct Income</th>
+                              <th className="px-4 py-3 font-medium text-right">Referral Income</th>
+                              <th className="px-4 py-3 font-medium text-right">Total</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {dailyIncome.map((day, idx) => (
+                              <tr key={day.date} className={`${isDarkMode ? 'border-gray-800 hover:bg-dark-700' : 'border-gray-100 hover:bg-gray-50'} border-b`}>
+                                <td className={`px-4 py-3 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                                  {new Date(day.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                </td>
+                                <td className="px-4 py-3 text-right text-cyan-400 font-medium">
+                                  ${(day.directJoining || 0).toFixed(2)}
+                                </td>
+                                <td className="px-4 py-3 text-right text-yellow-400 font-medium">
+                                  ${(day.referralIncome || 0).toFixed(2)}
+                                </td>
+                                <td className="px-4 py-3 text-right text-accent-green font-bold">
+                                  ${(day.total || 0).toFixed(2)}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {activeTab === 'downline' && (
                 <div className={`${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'} rounded-xl ${isMobile ? 'p-3' : 'p-5'} border`}>
                   {downline.length === 0 ? (
@@ -899,36 +1039,79 @@ const IBPage = () => {
               )}
 
               {activeTab === 'withdraw' && (
-                <div className={isMobile ? '' : 'max-w-md'}>
+                <div className={`grid ${isMobile ? 'grid-cols-1 gap-4' : 'grid-cols-2 gap-6'}`}>
+                  {/* Direct Income Withdrawal */}
                   <div className={`${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'} rounded-xl ${isMobile ? 'p-4' : 'p-6'} border`}>
-                    <h3 className={`font-semibold ${isMobile ? 'mb-3 text-sm' : 'mb-4'} ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Withdraw Commission</h3>
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="w-8 h-8 bg-cyan-500/20 rounded-lg flex items-center justify-center">
+                        <DollarSign size={16} className="text-cyan-400" />
+                      </div>
+                      <h3 className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Direct Income</h3>
+                    </div>
                     <div className="mb-3">
                       <p className="text-gray-400 text-xs mb-1">Available Balance</p>
-                      <p className={`text-accent-green font-bold ${isMobile ? 'text-xl' : 'text-2xl'}`}>${ibProfile.ibWalletBalance?.toFixed(2) || '0.00'}</p>
+                      <p className="text-cyan-400 font-bold text-2xl">${ibProfile.incomeBreakdown?.directJoining?.total?.toFixed(2) || '0.00'}</p>
                     </div>
                     <div className="mb-3">
                       <label className="text-gray-400 text-xs mb-1 block">Amount</label>
                       <input
                         type="number"
-                        value={withdrawAmount}
-                        onChange={(e) => setWithdrawAmount(e.target.value)}
+                        value={directWithdrawAmount}
+                        onChange={(e) => setDirectWithdrawAmount(e.target.value)}
                         placeholder="Enter amount"
                         className={`w-full bg-dark-700 border border-gray-600 rounded-lg px-3 py-2 text-white ${isMobile ? 'text-sm' : ''}`}
                       />
                     </div>
                     <button
-                      onClick={handleWithdraw}
-                      disabled={!withdrawAmount || parseFloat(withdrawAmount) <= 0}
-                      className={`w-full bg-accent-green text-black py-2 rounded-lg font-medium hover:bg-accent-green/90 disabled:opacity-50 ${isMobile ? 'text-sm' : ''}`}
+                      onClick={() => handleWithdrawType('direct')}
+                      disabled={!directWithdrawAmount || parseFloat(directWithdrawAmount) <= 0}
+                      className={`w-full bg-cyan-500 text-white py-2 rounded-lg font-medium hover:bg-cyan-600 disabled:opacity-50 ${isMobile ? 'text-sm' : ''}`}
                     >
-                      Request Withdrawal
+                      Withdraw Direct Income
                     </button>
-                    {ibProfile.pendingWithdrawal > 0 && (
-                      <p className="text-yellow-500 text-sm mt-3">
-                        Pending withdrawal: ${ibProfile.pendingWithdrawal.toFixed(2)}
-                      </p>
-                    )}
+                    <p className="text-gray-500 text-xs mt-2">Instant withdrawal available</p>
                   </div>
+
+                  {/* Referral Income Withdrawal */}
+                  <div className={`${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'} rounded-xl ${isMobile ? 'p-4' : 'p-6'} border`}>
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="w-8 h-8 bg-yellow-500/20 rounded-lg flex items-center justify-center">
+                        <TrendingUp size={16} className="text-yellow-400" />
+                      </div>
+                      <h3 className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Referral Income</h3>
+                    </div>
+                    <div className="mb-3">
+                      <p className="text-gray-400 text-xs mb-1">Available Balance</p>
+                      <p className="text-yellow-400 font-bold text-2xl">${ibProfile.incomeBreakdown?.referralIncome?.total?.toFixed(2) || '0.00'}</p>
+                    </div>
+                    <div className="mb-3">
+                      <label className="text-gray-400 text-xs mb-1 block">Amount</label>
+                      <input
+                        type="number"
+                        value={referralWithdrawAmount}
+                        onChange={(e) => setReferralWithdrawAmount(e.target.value)}
+                        placeholder="Enter amount"
+                        className={`w-full bg-dark-700 border border-gray-600 rounded-lg px-3 py-2 text-white ${isMobile ? 'text-sm' : ''}`}
+                      />
+                    </div>
+                    <button
+                      onClick={() => handleWithdrawType('referral')}
+                      disabled={!referralWithdrawAmount || parseFloat(referralWithdrawAmount) <= 0}
+                      className={`w-full bg-yellow-500 text-black py-2 rounded-lg font-medium hover:bg-yellow-600 disabled:opacity-50 ${isMobile ? 'text-sm' : ''}`}
+                    >
+                      Withdraw Referral Income
+                    </button>
+                    <p className="text-orange-400 text-xs mt-2">Requires admin approval</p>
+                  </div>
+
+                  {/* Pending Withdrawals */}
+                  {ibProfile.pendingWithdrawal > 0 && (
+                    <div className={`${isMobile ? '' : 'col-span-2'} ${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'} rounded-xl p-4 border`}>
+                      <p className="text-yellow-500 text-sm">
+                        Pending withdrawal: ${ibProfile.pendingWithdrawal?.toFixed(2) || '0.00'}
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

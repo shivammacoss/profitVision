@@ -81,6 +81,15 @@ const ibModeSettingsSchema = new mongoose.Schema({
   withdrawalApprovalRequired: { type: Boolean, default: true },
   enableDetailedLogs: { type: Boolean, default: true },
   
+  // ==================== Withdrawal Settings ====================
+  // Direct Income can be withdrawn immediately
+  directIncomeWithdrawalEnabled: { type: Boolean, default: true },
+  
+  // Referral Income withdrawal requires admin approval and lock period
+  referralIncomeWithdrawalEnabled: { type: Boolean, default: true },
+  referralIncomeWithdrawalLockDays: { type: Number, default: 7 }, // Days before referral income can be withdrawn
+  referralIncomeRequiresApproval: { type: Boolean, default: true }, // Admin must approve referral withdrawals
+  
   // Last payout tracking
   lastMonthlyPayoutDate: { type: Date, default: null },
   lastMonthlyPayoutMonth: { type: String, default: null }

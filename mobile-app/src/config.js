@@ -3,7 +3,7 @@
 // Use 'localhost' only for iOS simulator or Android emulator with adb reverse
 
 // Get your IP: run `ipconfig getifaddr en0` on Mac or `ipconfig` on Windows
-const DEV_IP = '192.168.29.134'
+const DEV_IP = '192.168.1.7'
 
 // For Android Emulator, use 10.0.2.2
 // For iOS Simulator, use localhost

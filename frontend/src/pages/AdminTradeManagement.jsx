@@ -716,15 +716,15 @@ const AdminTradeManagement = () => {
 
       {/* Create Trade Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-dark-800 rounded-2xl w-full max-w-lg">
-            <div className="p-6 border-b border-gray-800 flex items-center justify-between">
-              <h2 className="text-xl font-bold text-white">Create Trade</h2>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-dark-800 rounded-2xl w-full max-w-lg my-4 max-h-[90vh] flex flex-col">
+            <div className="p-4 sm:p-6 border-b border-gray-800 flex items-center justify-between shrink-0">
+              <h2 className="text-lg sm:text-xl font-bold text-white">Create Trade</h2>
               <button onClick={() => setShowCreateModal(false)} className="text-gray-400 hover:text-white">
                 <X size={24} />
               </button>
             </div>
-            <div className="p-6 space-y-4">
+            <div className="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1">
               <div>
                 <label className="block text-gray-400 text-sm mb-1">User</label>
                 <select
@@ -891,16 +891,18 @@ const AdminTradeManagement = () => {
                   />
                 </div>
               </div>
-              <div className="flex gap-3 pt-4">
+            </div>
+            <div className="p-4 sm:p-6 border-t border-gray-800 shrink-0">
+              <div className="flex gap-3">
                 <button
                   onClick={() => setShowCreateModal(false)}
-                  className="flex-1 py-2 bg-dark-700 hover:bg-dark-600 text-white rounded-lg"
+                  className="flex-1 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-xl text-sm sm:text-base font-medium border border-gray-600 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleCreateTrade}
-                  className="flex-1 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg"
+                  className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm sm:text-base font-medium border border-blue-500 transition-colors"
                 >
                   Create Trade
                 </button>

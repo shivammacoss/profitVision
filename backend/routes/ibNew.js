@@ -5,6 +5,9 @@ import IBCommission from '../models/IBCommissionNew.js'
 import IBWallet from '../models/IBWallet.js'
 import IBLevel from '../models/IBLevel.js'
 import IBUser from '../models/IBUser.js'
+import ReferralCommission from '../models/ReferralCommission.js'
+import IBWithdrawalRequest from '../models/IBWithdrawalRequest.js'
+import IBModeSettings from '../models/IBModeSettings.js'
 import ibEngine from '../services/ibEngineNew.js'
 import mongoose from 'mongoose'
 
@@ -121,6 +124,21 @@ router.get('/my-profile/:userId', async (req, res) => {
       console.error('Error getting level progress:', e)
     }
 
+    // Get income breakdown (Direct Joining vs Referral Income)
+    const directIncomeResult = await ReferralCommission.aggregate([
+      { $match: { recipientUserId: new mongoose.Types.ObjectId(userId), commissionType: 'DIRECT_JOINING', status: 'CREDITED' } },
+      { $group: { _id: null, total: { $sum: '$commissionAmount' }, count: { $sum: 1 } } }
+    ])
+    const referralIncomeResult = await ReferralCommission.aggregate([
+      { $match: { recipientUserId: new mongoose.Types.ObjectId(userId), commissionType: 'REFERRAL_INCOME', status: 'CREDITED' } },
+      { $group: { _id: null, total: { $sum: '$commissionAmount' }, count: { $sum: 1 } } }
+    ])
+
+    const incomeBreakdown = {
+      directJoining: { total: directIncomeResult[0]?.total || 0, count: directIncomeResult[0]?.count || 0 },
+      referralIncome: { total: referralIncomeResult[0]?.total || 0, count: referralIncomeResult[0]?.count || 0 }
+    }
+
     res.json({
       success: true,
       isIB: true,
@@ -138,7 +156,8 @@ router.get('/my-profile/:userId', async (req, res) => {
       },
       wallet,
       stats: stats.stats,
-      levelProgress
+      levelProgress,
+      incomeBreakdown
     })
   } catch (error) {
     console.error('Error fetching IB profile:', error)
@@ -146,16 +165,35 @@ router.get('/my-profile/:userId', async (req, res) => {
   }
 })
 
-// GET /api/ib/my-referrals/:userId - Get direct referrals
+// GET /api/ib/my-referrals/:userId - Get direct referrals with stats
 router.get('/my-referrals/:userId', async (req, res) => {
   try {
     const { userId } = req.params
     
     const referrals = await User.find({ parentIBId: userId })
-      .select('firstName email createdAt isIB ibStatus')
+      .select('firstName lastName email createdAt isIB ibStatus')
       .sort({ createdAt: -1 })
 
-    res.json({ success: true, referrals })
+    // Get stats for each referral
+    const referralsWithStats = await Promise.all(referrals.map(async (ref) => {
+      // Get commission earned from this referral (Direct Joining commission)
+      const directCommission = await ReferralCommission.aggregate([
+        { $match: { recipientUserId: new mongoose.Types.ObjectId(userId), sourceUserId: ref._id, status: 'CREDITED' } },
+        { $group: { _id: null, total: { $sum: '$commissionAmount' } } }
+      ])
+      
+      return {
+        ...ref.toObject(),
+        userId: ref,
+        stats: {
+          commissionEarned: directCommission[0]?.total || 0,
+          totalEquity: 0,
+          totalVolume: 0
+        }
+      }
+    }))
+
+    res.json({ success: true, referrals: referralsWithStats })
   } catch (error) {
     console.error('Error fetching referrals:', error)
     res.status(500).json({ success: false, message: error.message })
@@ -222,7 +260,465 @@ router.post('/withdraw', async (req, res) => {
   }
 })
 
+// ==================== SEPARATE WITHDRAWAL ROUTES ====================
+
+// POST /api/ib/withdraw/direct - Withdraw Direct Income
+router.post('/withdraw/direct', async (req, res) => {
+  try {
+    const { userId, amount, paymentMethod, paymentDetails } = req.body
+    if (!userId || !amount || amount <= 0) {
+      return res.status(400).json({ success: false, message: 'Valid user ID and amount are required' })
+    }
+
+    const wallet = await IBWallet.findOne({ ibUserId: userId })
+    if (!wallet) {
+      return res.status(404).json({ success: false, message: 'Wallet not found' })
+    }
+
+    if (amount > wallet.directIncomeBalance) {
+      return res.status(400).json({ success: false, message: 'Insufficient direct income balance' })
+    }
+
+    const settings = await IBModeSettings.getSettings()
+    if (!settings.directIncomeWithdrawalEnabled) {
+      return res.status(400).json({ success: false, message: 'Direct income withdrawal is disabled' })
+    }
+
+    // Create withdrawal request
+    const withdrawalRequest = await IBWithdrawalRequest.create({
+      ibUserId: userId,
+      amount: parseFloat(amount),
+      withdrawalType: 'DIRECT',
+      paymentMethod: paymentMethod || 'BANK_TRANSFER',
+      paymentDetails: paymentDetails || {},
+      status: 'PENDING'
+    })
+
+    // Deduct from wallet
+    await wallet.requestDirectIncomeWithdrawal(parseFloat(amount))
+
+    res.json({
+      success: true,
+      message: `Direct income withdrawal request of $${amount} submitted`,
+      withdrawalId: withdrawalRequest._id
+    })
+  } catch (error) {
+    console.error('Error requesting direct withdrawal:', error)
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// POST /api/ib/withdraw/referral - Withdraw Referral Income (requires approval)
+router.post('/withdraw/referral', async (req, res) => {
+  try {
+    const { userId, amount, paymentMethod, paymentDetails } = req.body
+    if (!userId || !amount || amount <= 0) {
+      return res.status(400).json({ success: false, message: 'Valid user ID and amount are required' })
+    }
+
+    const wallet = await IBWallet.findOne({ ibUserId: userId })
+    if (!wallet) {
+      return res.status(404).json({ success: false, message: 'Wallet not found' })
+    }
+
+    if (amount > wallet.referralIncomeBalance) {
+      return res.status(400).json({ success: false, message: 'Insufficient referral income balance' })
+    }
+
+    const settings = await IBModeSettings.getSettings()
+    if (!settings.referralIncomeWithdrawalEnabled) {
+      return res.status(400).json({ success: false, message: 'Referral income withdrawal is disabled' })
+    }
+
+    // Calculate eligible date based on lock period
+    const eligibleDate = new Date()
+    eligibleDate.setDate(eligibleDate.getDate() + settings.referralIncomeWithdrawalLockDays)
+
+    // Create withdrawal request
+    const withdrawalRequest = await IBWithdrawalRequest.create({
+      ibUserId: userId,
+      amount: parseFloat(amount),
+      withdrawalType: 'REFERRAL',
+      paymentMethod: paymentMethod || 'BANK_TRANSFER',
+      paymentDetails: paymentDetails || {},
+      status: settings.referralIncomeRequiresApproval ? 'PENDING' : 'APPROVED',
+      eligibleForWithdrawalAt: eligibleDate
+    })
+
+    // Deduct from wallet
+    await wallet.requestReferralIncomeWithdrawal(parseFloat(amount))
+
+    res.json({
+      success: true,
+      message: settings.referralIncomeRequiresApproval 
+        ? `Referral income withdrawal request of $${amount} submitted for admin approval`
+        : `Referral income withdrawal of $${amount} approved`,
+      withdrawalId: withdrawalRequest._id,
+      requiresApproval: settings.referralIncomeRequiresApproval
+    })
+  } catch (error) {
+    console.error('Error requesting referral withdrawal:', error)
+    res.status(400).json({ success: false, message: error.message })
+  }
+})
+
+// GET /api/ib/my-withdrawals/:userId - Get user's withdrawal history
+router.get('/my-withdrawals/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params
+    const { type } = req.query // 'DIRECT' or 'REFERRAL' or all
+
+    const query = { ibUserId: userId }
+    if (type) query.withdrawalType = type
+
+    const withdrawals = await IBWithdrawalRequest.find(query)
+      .sort({ requestedAt: -1 })
+      .limit(50)
+
+    res.json({ success: true, withdrawals })
+  } catch (error) {
+    console.error('Error fetching withdrawals:', error)
+    res.status(500).json({ success: false, message: error.message })
+  }
+})
+
+// GET /api/ib/daily-income/:userId - Get daily income breakdown
+router.get('/daily-income/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params
+    const { days = 30 } = req.query
+
+    const startDate = new Date()
+    startDate.setDate(startDate.getDate() - parseInt(days))
+
+    // Get daily breakdown from ReferralCommission
+    const dailyIncome = await ReferralCommission.aggregate([
+      { 
+        $match: { 
+          recipientUserId: new mongoose.Types.ObjectId(userId),
+          status: 'CREDITED',
+          createdAt: { $gte: startDate }
+        } 
+      },
+      {
+        $group: {
+          _id: {
+            date: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
+            type: '$commissionType'
+          },
+          total: { $sum: '$commissionAmount' },
+          count: { $sum: 1 }
+        }
+      },
+      { $sort: { '_id.date': -1 } }
+    ])
+
+    // Restructure for easier frontend consumption
+    const dailyMap = {}
+    dailyIncome.forEach(item => {
+      const date = item._id.date
+      if (!dailyMap[date]) {
+        dailyMap[date] = { date, directJoining: 0, referralIncome: 0, total: 0 }
+      }
+      if (item._id.type === 'DIRECT_JOINING') {
+        dailyMap[date].directJoining = item.total
+      } else if (item._id.type === 'REFERRAL_INCOME') {
+        dailyMap[date].referralIncome = item.total
+      }
+      dailyMap[date].total += item.total
+    })
+
+    const dailyBreakdown = Object.values(dailyMap).sort((a, b) => b.date.localeCompare(a.date))
+
+    res.json({ success: true, dailyBreakdown })
+  } catch (error) {
+    console.error('Error fetching daily income:', error)
+    res.status(500).json({ success: false, message: error.message })
+  }
+})
+
 // ==================== ADMIN ROUTES ====================
+
+// GET /api/ib/admin/withdrawal-requests - Get all pending withdrawal requests
+router.get('/admin/withdrawal-requests', async (req, res) => {
+  try {
+    const { status = 'PENDING', type } = req.query
+
+    const query = { status }
+    if (type) query.withdrawalType = type
+
+    const requests = await IBWithdrawalRequest.find(query)
+      .populate('ibUserId', 'firstName lastName email referralCode')
+      .sort({ requestedAt: 1 })
+
+    res.json({ success: true, requests })
+  } catch (error) {
+    console.error('Error fetching withdrawal requests:', error)
+    res.status(500).json({ success: false, message: error.message })
+  }
+})
+
+// PUT /api/ib/admin/withdrawal/:requestId/approve - Approve withdrawal
+router.put('/admin/withdrawal/:requestId/approve', async (req, res) => {
+  try {
+    const { requestId } = req.params
+    const { adminId, transactionReference, notes } = req.body
+
+    const request = await IBWithdrawalRequest.findById(requestId)
+    if (!request) {
+      return res.status(404).json({ success: false, message: 'Withdrawal request not found' })
+    }
+
+    if (request.status !== 'PENDING') {
+      return res.status(400).json({ success: false, message: 'Request is not pending' })
+    }
+
+    // Update request status
+    request.status = 'COMPLETED'
+    request.reviewedBy = adminId
+    request.reviewedAt = new Date()
+    request.completedAt = new Date()
+    request.transactionReference = transactionReference
+    request.notes = notes
+    await request.save()
+
+    // Complete wallet withdrawal
+    const wallet = await IBWallet.findOne({ ibUserId: request.ibUserId })
+    if (wallet) {
+      if (request.withdrawalType === 'DIRECT') {
+        await wallet.completeDirectIncomeWithdrawal(request.amount)
+      } else {
+        await wallet.completeReferralIncomeWithdrawal(request.amount)
+      }
+    }
+
+    res.json({ success: true, message: 'Withdrawal approved and completed' })
+  } catch (error) {
+    console.error('Error approving withdrawal:', error)
+    res.status(500).json({ success: false, message: error.message })
+  }
+})
+
+// PUT /api/ib/admin/withdrawal/:requestId/reject - Reject withdrawal
+router.put('/admin/withdrawal/:requestId/reject', async (req, res) => {
+  try {
+    const { requestId } = req.params
+    const { adminId, rejectionReason } = req.body
+
+    const request = await IBWithdrawalRequest.findById(requestId)
+    if (!request) {
+      return res.status(404).json({ success: false, message: 'Withdrawal request not found' })
+    }
+
+    if (request.status !== 'PENDING') {
+      return res.status(400).json({ success: false, message: 'Request is not pending' })
+    }
+
+    // Update request status
+    request.status = 'REJECTED'
+    request.reviewedBy = adminId
+    request.reviewedAt = new Date()
+    request.rejectionReason = rejectionReason
+    await request.save()
+
+    // Refund wallet
+    const wallet = await IBWallet.findOne({ ibUserId: request.ibUserId })
+    if (wallet) {
+      if (request.withdrawalType === 'DIRECT') {
+        await wallet.cancelDirectIncomeWithdrawal(request.amount)
+      } else {
+        await wallet.cancelReferralIncomeWithdrawal(request.amount)
+      }
+    }
+
+    res.json({ success: true, message: 'Withdrawal rejected and refunded' })
+  } catch (error) {
+    console.error('Error rejecting withdrawal:', error)
+    res.status(500).json({ success: false, message: error.message })
+  }
+})
+
+// GET /api/ib/admin/user-daily-income/:userId - Admin view user's daily income
+router.get('/admin/user-daily-income/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params
+    const { days = 30 } = req.query
+
+    const startDate = new Date()
+    startDate.setDate(startDate.getDate() - parseInt(days))
+
+    const dailyIncome = await ReferralCommission.aggregate([
+      { 
+        $match: { 
+          recipientUserId: new mongoose.Types.ObjectId(userId),
+          status: 'CREDITED',
+          createdAt: { $gte: startDate }
+        } 
+      },
+      {
+        $group: {
+          _id: {
+            date: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
+            type: '$commissionType'
+          },
+          total: { $sum: '$commissionAmount' },
+          count: { $sum: 1 }
+        }
+      },
+      { $sort: { '_id.date': -1 } }
+    ])
+
+    // Get user info
+    const user = await User.findById(userId).select('firstName lastName email referralCode')
+
+    // Restructure
+    const dailyMap = {}
+    dailyIncome.forEach(item => {
+      const date = item._id.date
+      if (!dailyMap[date]) {
+        dailyMap[date] = { date, directJoining: 0, referralIncome: 0, total: 0 }
+      }
+      if (item._id.type === 'DIRECT_JOINING') {
+        dailyMap[date].directJoining = item.total
+      } else if (item._id.type === 'REFERRAL_INCOME') {
+        dailyMap[date].referralIncome = item.total
+      }
+      dailyMap[date].total += item.total
+    })
+
+    const dailyBreakdown = Object.values(dailyMap).sort((a, b) => b.date.localeCompare(a.date))
+
+    res.json({ success: true, user, dailyBreakdown })
+  } catch (error) {
+    console.error('Error fetching user daily income:', error)
+    res.status(500).json({ success: false, message: error.message })
+  }
+})
+
+// PUT /api/ib/admin/withdrawal-settings - Update withdrawal settings
+router.put('/admin/withdrawal-settings', async (req, res) => {
+  try {
+    const { 
+      directIncomeWithdrawalEnabled,
+      referralIncomeWithdrawalEnabled,
+      referralIncomeWithdrawalLockDays,
+      referralIncomeRequiresApproval,
+      minWithdrawalAmount
+    } = req.body
+
+    const settings = await IBModeSettings.getSettings()
+
+    if (directIncomeWithdrawalEnabled !== undefined) {
+      settings.directIncomeWithdrawalEnabled = directIncomeWithdrawalEnabled
+    }
+    if (referralIncomeWithdrawalEnabled !== undefined) {
+      settings.referralIncomeWithdrawalEnabled = referralIncomeWithdrawalEnabled
+    }
+    if (referralIncomeWithdrawalLockDays !== undefined) {
+      settings.referralIncomeWithdrawalLockDays = referralIncomeWithdrawalLockDays
+    }
+    if (referralIncomeRequiresApproval !== undefined) {
+      settings.referralIncomeRequiresApproval = referralIncomeRequiresApproval
+    }
+    if (minWithdrawalAmount !== undefined) {
+      settings.minWithdrawalAmount = minWithdrawalAmount
+    }
+
+    await settings.save()
+
+    res.json({ success: true, message: 'Withdrawal settings updated', settings })
+  } catch (error) {
+    console.error('Error updating withdrawal settings:', error)
+    res.status(500).json({ success: false, message: error.message })
+  }
+})
+
+// GET /api/ib/admin/withdrawal-settings - Get withdrawal settings
+router.get('/admin/withdrawal-settings', async (req, res) => {
+  try {
+    const settings = await IBModeSettings.getSettings()
+    res.json({ 
+      success: true, 
+      settings: {
+        directIncomeWithdrawalEnabled: settings.directIncomeWithdrawalEnabled,
+        referralIncomeWithdrawalEnabled: settings.referralIncomeWithdrawalEnabled,
+        referralIncomeWithdrawalLockDays: settings.referralIncomeWithdrawalLockDays,
+        referralIncomeRequiresApproval: settings.referralIncomeRequiresApproval,
+        minWithdrawalAmount: settings.minWithdrawalAmount
+      }
+    })
+  } catch (error) {
+    console.error('Error fetching withdrawal settings:', error)
+    res.status(500).json({ success: false, message: error.message })
+  }
+})
+
+// GET /api/ib/admin/income-breakdown - Get all users' Direct/Referral income breakdown
+router.get('/admin/income-breakdown', async (req, res) => {
+  try {
+    // Get all income breakdown grouped by user and type
+    const breakdown = await ReferralCommission.aggregate([
+      { $match: { status: 'CREDITED' } },
+      { $group: {
+        _id: { recipientUserId: '$recipientUserId', commissionType: '$commissionType' },
+        total: { $sum: '$commissionAmount' },
+        count: { $sum: 1 }
+      }},
+      { $lookup: {
+        from: 'users',
+        localField: '_id.recipientUserId',
+        foreignField: '_id',
+        as: 'user'
+      }},
+      { $unwind: '$user' },
+      { $project: {
+        userId: '$_id.recipientUserId',
+        userName: '$user.firstName',
+        email: '$user.email',
+        commissionType: '$_id.commissionType',
+        total: 1,
+        count: 1
+      }},
+      { $sort: { total: -1 } }
+    ])
+
+    // Restructure data for easier frontend consumption
+    const userIncomeMap = {}
+    breakdown.forEach(item => {
+      const key = item.userId.toString()
+      if (!userIncomeMap[key]) {
+        userIncomeMap[key] = {
+          userId: item.userId,
+          userName: item.userName,
+          email: item.email,
+          directJoining: { total: 0, count: 0 },
+          referralIncome: { total: 0, count: 0 },
+          totalIncome: 0
+        }
+      }
+      if (item.commissionType === 'DIRECT_JOINING') {
+        userIncomeMap[key].directJoining = { total: item.total, count: item.count }
+      } else if (item.commissionType === 'REFERRAL_INCOME') {
+        userIncomeMap[key].referralIncome = { total: item.total, count: item.count }
+      }
+      userIncomeMap[key].totalIncome += item.total
+    })
+
+    const users = Object.values(userIncomeMap).sort((a, b) => b.totalIncome - a.totalIncome)
+
+    // Calculate totals
+    const totals = {
+      directJoining: users.reduce((sum, u) => sum + u.directJoining.total, 0),
+      referralIncome: users.reduce((sum, u) => sum + u.referralIncome.total, 0),
+      total: users.reduce((sum, u) => sum + u.totalIncome, 0)
+    }
+
+    res.json({ success: true, users, totals })
+  } catch (error) {
+    console.error('Error fetching income breakdown:', error)
+    res.status(500).json({ success: false, message: error.message })
+  }
+})
 
 // GET /api/ib/admin/all - Get all IBs
 router.get('/admin/all', async (req, res) => {
@@ -241,13 +737,30 @@ router.get('/admin/all', async (req, res) => {
 
     const total = await User.countDocuments(query)
 
-    // Get wallet balances for each IB
+    // Get wallet balances and income breakdown for each IB
     const ibsWithWallets = await Promise.all(ibs.map(async (ib) => {
       const wallet = await IBWallet.findOne({ ibUserId: ib._id })
+      
+      // Get income breakdown (Direct vs Referral)
+      const directIncomeResult = await ReferralCommission.aggregate([
+        { $match: { recipientUserId: ib._id, commissionType: 'DIRECT_JOINING', status: 'CREDITED' } },
+        { $group: { _id: null, total: { $sum: '$commissionAmount' }, count: { $sum: 1 } } }
+      ])
+      const referralIncomeResult = await ReferralCommission.aggregate([
+        { $match: { recipientUserId: ib._id, commissionType: 'REFERRAL_INCOME', status: 'CREDITED' } },
+        { $group: { _id: null, total: { $sum: '$commissionAmount' }, count: { $sum: 1 } } }
+      ])
+      
+      // Get direct referrals count
+      const directReferrals = await User.countDocuments({ parentIBId: ib._id })
+      
       return {
         ...ib.toObject(),
         walletBalance: wallet?.balance || 0,
-        totalEarned: wallet?.totalEarned || 0
+        totalEarned: wallet?.totalEarned || 0,
+        directIncome: directIncomeResult[0]?.total || 0,
+        referralIncome: referralIncomeResult[0]?.total || 0,
+        directReferrals
       }
     }))
 
@@ -737,7 +1250,23 @@ router.get('/admin/dashboard', async (req, res) => {
     const activeIBs = await User.countDocuments({ isIB: true, ibStatus: 'ACTIVE' })
     const pendingIBs = await User.countDocuments({ isIB: true, ibStatus: 'PENDING' })
 
-    const commissionStats = await IBCommission.aggregate([
+    // Get total referrals (users who have a parentIBId)
+    const totalReferrals = await User.countDocuments({ parentIBId: { $ne: null } })
+
+    // Get commission stats from ReferralCommission (Direct + Referral)
+    const referralCommissionStats = await ReferralCommission.aggregate([
+      { $match: { status: 'CREDITED' } },
+      {
+        $group: {
+          _id: null,
+          totalCommission: { $sum: '$commissionAmount' },
+          totalCount: { $sum: 1 }
+        }
+      }
+    ])
+
+    // Also get from IBCommission for backward compatibility
+    const ibCommissionStats = await IBCommission.aggregate([
       { $match: { status: 'CREDITED' } },
       {
         $group: {
@@ -759,14 +1288,18 @@ router.get('/admin/dashboard', async (req, res) => {
       }
     ])
 
+    // Combine commissions from both sources
+    const totalCommission = (referralCommissionStats[0]?.totalCommission || 0) + (ibCommissionStats[0]?.totalCommission || 0)
+
     res.json({
       success: true,
       stats: {
         totalIBs,
         activeIBs,
         pendingIBs,
-        totalCommissionPaid: commissionStats[0]?.totalCommission || 0,
-        totalTradesWithCommission: commissionStats[0]?.totalTrades || 0,
+        totalReferrals,
+        totalCommissionPaid: totalCommission,
+        totalTradesWithCommission: ibCommissionStats[0]?.totalTrades || 0,
         totalIBWalletBalance: walletStats[0]?.totalBalance || 0,
         totalIBEarnings: walletStats[0]?.totalEarned || 0,
         totalIBWithdrawals: walletStats[0]?.totalWithdrawn || 0

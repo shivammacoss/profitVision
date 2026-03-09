@@ -1703,7 +1703,7 @@ const TradingPage = () => {
                     <button 
                       onClick={() => executeMarketOrder('BUY')}
                       disabled={isExecutingTrade}
-                      className="flex-1 rounded py-3 text-center transition-colors bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex-1 rounded py-3 text-center transition-colors bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <div className="text-white text-[10px] font-medium">BUY</div>
                       <div className="text-white font-mono text-lg font-bold">
@@ -1732,8 +1732,8 @@ const TradingPage = () => {
                       onClick={() => setSelectedSide('BUY')}
                       className={`flex-1 rounded py-1.5 text-center text-xs transition-colors ${
                         selectedSide === 'BUY' 
-                          ? 'bg-red-500/20 border border-blue-500 text-blue-400' 
-                          : isDarkMode ? 'bg-[#1a1a1a] border border-gray-600 text-gray-400 hover:border-blue-500/50' : 'bg-gray-50 border border-gray-300 text-gray-600 hover:border-blue-500/50'
+                          ? 'bg-green-500/20 border border-green-500 text-green-400' 
+                          : isDarkMode ? 'bg-[#1a1a1a] border border-gray-600 text-gray-400 hover:border-green-500/50' : 'bg-gray-50 border border-gray-300 text-gray-600 hover:border-green-500/50'
                       }`}
                     >
                       Buy Side
@@ -1892,7 +1892,7 @@ const TradingPage = () => {
                     disabled={isExecutingTrade}
                     className={`w-full py-3 rounded font-medium text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
                       selectedSide === 'BUY' 
-                        ? 'bg-red-600/20 border border-blue-600 hover:bg-red-600/30 text-blue-400'
+                        ? 'bg-green-600/20 border border-green-600 hover:bg-green-600/30 text-green-400'
                         : 'bg-red-600/20 border border-red-600 hover:bg-red-600/30 text-red-400'
                     }`}
                   >

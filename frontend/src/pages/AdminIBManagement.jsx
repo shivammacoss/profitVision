@@ -51,6 +51,19 @@ const AdminIBManagement = () => {
   // Withdrawal Requests states
   const [pendingWithdrawals, setPendingWithdrawals] = useState([])
   const [withdrawalLoading, setWithdrawalLoading] = useState(false)
+  
+  // Income Report states
+  const [incomeReport, setIncomeReport] = useState({ users: [], totals: { directJoining: 0, referralIncome: 0, total: 0 } })
+  
+  // Income Withdrawal states
+  const [incomeWithdrawals, setIncomeWithdrawals] = useState([])
+  const [withdrawalSettings, setWithdrawalSettings] = useState({
+    directIncomeWithdrawalEnabled: true,
+    referralIncomeWithdrawalEnabled: true,
+    referralIncomeWithdrawalLockDays: 7,
+    referralIncomeRequiresApproval: true,
+    minWithdrawalAmount: 50
+  })
 
   useEffect(() => {
     fetchDashboard()
@@ -60,6 +73,9 @@ const AdminIBManagement = () => {
     fetchReferralPlans()
     fetchEntryFeeSettings()
     fetchPendingWithdrawals()
+    fetchIncomeReport()
+    fetchIncomeWithdrawals()
+    fetchWithdrawalSettings()
   }, [])
 
   const fetchEntryFeeSettings = async () => {
@@ -86,6 +102,103 @@ const AdminIBManagement = () => {
       const data = await res.json()
       if (data.success) {
         setMessage({ type: 'success', text: 'Entry fee settings saved!' })
+      } else {
+        setMessage({ type: 'error', text: data.message || 'Failed to save' })
+      }
+    } catch (error) {
+      setMessage({ type: 'error', text: 'Error saving settings' })
+    }
+    setSaving(false)
+    setTimeout(() => setMessage({ type: '', text: '' }), 3000)
+  }
+
+  const fetchIncomeReport = async () => {
+    try {
+      const res = await fetch(`${API_URL}/ib/admin/income-breakdown`)
+      const data = await res.json()
+      if (data.success) {
+        setIncomeReport({ users: data.users || [], totals: data.totals || { directJoining: 0, referralIncome: 0, total: 0 } })
+      }
+    } catch (error) {
+      console.error('Error fetching income report:', error)
+    }
+  }
+
+  const fetchIncomeWithdrawals = async () => {
+    try {
+      const res = await fetch(`${API_URL}/ib/admin/withdrawal-requests?status=PENDING`)
+      const data = await res.json()
+      if (data.success) {
+        setIncomeWithdrawals(data.requests || [])
+      }
+    } catch (error) {
+      console.error('Error fetching income withdrawals:', error)
+    }
+  }
+
+  const fetchWithdrawalSettings = async () => {
+    try {
+      const res = await fetch(`${API_URL}/ib/admin/withdrawal-settings`)
+      const data = await res.json()
+      if (data.success) {
+        setWithdrawalSettings(data.settings)
+      }
+    } catch (error) {
+      console.error('Error fetching withdrawal settings:', error)
+    }
+  }
+
+  const handleApproveIncomeWithdrawal = async (requestId) => {
+    try {
+      const res = await fetch(`${API_URL}/ib/admin/withdrawal/${requestId}/approve`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ adminId: 'admin' })
+      })
+      const data = await res.json()
+      if (data.success) {
+        setMessage({ type: 'success', text: 'Withdrawal approved!' })
+        fetchIncomeWithdrawals()
+      } else {
+        setMessage({ type: 'error', text: data.message || 'Failed to approve' })
+      }
+    } catch (error) {
+      setMessage({ type: 'error', text: 'Error approving withdrawal' })
+    }
+    setTimeout(() => setMessage({ type: '', text: '' }), 3000)
+  }
+
+  const handleRejectIncomeWithdrawal = async (requestId, reason) => {
+    try {
+      const res = await fetch(`${API_URL}/ib/admin/withdrawal/${requestId}/reject`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ adminId: 'admin', rejectionReason: reason || 'Rejected by admin' })
+      })
+      const data = await res.json()
+      if (data.success) {
+        setMessage({ type: 'success', text: 'Withdrawal rejected and refunded' })
+        fetchIncomeWithdrawals()
+      } else {
+        setMessage({ type: 'error', text: data.message || 'Failed to reject' })
+      }
+    } catch (error) {
+      setMessage({ type: 'error', text: 'Error rejecting withdrawal' })
+    }
+    setTimeout(() => setMessage({ type: '', text: '' }), 3000)
+  }
+
+  const saveWithdrawalSettings = async () => {
+    setSaving(true)
+    try {
+      const res = await fetch(`${API_URL}/ib/admin/withdrawal-settings`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(withdrawalSettings)
+      })
+      const data = await res.json()
+      if (data.success) {
+        setMessage({ type: 'success', text: 'Withdrawal settings saved!' })
       } else {
         setMessage({ type: 'error', text: data.message || 'Failed to save' })
       }
@@ -130,7 +243,7 @@ const AdminIBManagement = () => {
       if (data.stats) {
         setDashboard({
           ibs: { total: data.stats.totalIBs, active: data.stats.activeIBs, pending: data.stats.pendingIBs },
-          referrals: { total: 0 },
+          referrals: { total: data.stats.totalReferrals || 0 },
           commissions: { 
             total: { totalCommission: data.stats.totalCommissionPaid || 0 },
             today: { totalCommission: 0 }
@@ -374,15 +487,17 @@ const AdminIBManagement = () => {
     setTimeout(() => setMessage({ type: '', text: '' }), 3000)
   }
 
-  const updateReferralLevel = (index, amount) => {
+  const updateReferralLevel = (index, value) => {
     const newLevels = [...referralPlan.levels]
-    newLevels[index] = { ...newLevels[index], amount: parseFloat(amount) || 0 }
+    // Allow empty string while typing, store as string for input control
+    newLevels[index] = { ...newLevels[index], amount: value === '' ? '' : (parseFloat(value) >= 0 ? parseFloat(value) : newLevels[index].amount) }
     setReferralPlan({ ...referralPlan, levels: newLevels })
   }
 
-  const updateJoiningLevel = (index, percentage) => {
+  const updateJoiningLevel = (index, value) => {
     const newLevels = [...joiningPlan.levels]
-    newLevels[index] = { ...newLevels[index], percentage: parseFloat(percentage) || 0 }
+    // Allow empty string while typing, store as string for input control
+    newLevels[index] = { ...newLevels[index], percentage: value === '' ? '' : (parseFloat(value) >= 0 ? parseFloat(value) : newLevels[index].percentage) }
     setJoiningPlan({ ...joiningPlan, levels: newLevels })
   }
 
@@ -480,6 +595,9 @@ const AdminIBManagement = () => {
           { id: 'ibs', label: 'Active IBs', count: dashboard?.ibs?.active },
           { id: 'applications', label: 'Applications', count: applications.length },
           { id: 'withdrawals', label: 'Withdrawal Requests', count: pendingWithdrawals.length, icon: DollarSign },
+          { id: 'income-withdrawals', label: 'Income Withdrawals', icon: DollarSign },
+          { id: 'income-report', label: 'Income Report', icon: TrendingUp },
+          { id: 'withdrawal-settings', label: 'Withdrawal Settings', icon: Settings },
           { id: 'settings', label: 'Entry Fee Settings', icon: Settings },
           { id: 'referral-income', label: 'Referral Income Plan', icon: Layers },
           { id: 'joining-income', label: 'Direct Joining Plan', icon: DollarSign },
@@ -538,7 +656,9 @@ const AdminIBManagement = () => {
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">IB</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Referral Code</th>
                     <th className="px-4 py-3 text-center text-xs font-medium text-gray-400 uppercase">Referrals</th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-400 uppercase">Earnings</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-cyan-400 uppercase">Direct Income</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-yellow-400 uppercase">Referral Income</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-400 uppercase">Total</th>
                     <th className="px-4 py-3 text-center text-xs font-medium text-gray-400 uppercase">Status</th>
                     <th className="px-4 py-3 text-center text-xs font-medium text-gray-400 uppercase">Actions</th>
                   </tr>
@@ -562,8 +682,10 @@ const AdminIBManagement = () => {
                           {ib.referralCode}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-center text-white">{ib.referralCount || 0}</td>
-                      <td className="px-4 py-3 text-right text-green-400">${(ib.totalEarnings || 0).toFixed(2)}</td>
+                      <td className="px-4 py-3 text-center text-white">{ib.directReferrals || ib.referralCount || 0}</td>
+                      <td className="px-4 py-3 text-right text-cyan-400">${(ib.directIncome || 0).toFixed(2)}</td>
+                      <td className="px-4 py-3 text-right text-yellow-400">${(ib.referralIncome || 0).toFixed(2)}</td>
+                      <td className="px-4 py-3 text-right text-accent-green font-medium">${((ib.directIncome || 0) + (ib.referralIncome || 0)).toFixed(2)}</td>
                       <td className="px-4 py-3 text-center">
                         <span className={`px-2 py-1 rounded text-xs ${
                           ib.ibStatus === 'ACTIVE' ? 'bg-green-500/20 text-green-400' :
@@ -780,6 +902,242 @@ const AdminIBManagement = () => {
         </div>
       )}
 
+      {/* Income Withdrawals Tab */}
+      {activeTab === 'income-withdrawals' && (
+        <div className="space-y-6">
+          <div className="bg-dark-800 rounded-xl p-6 border border-gray-800">
+            <h2 className="text-xl font-bold text-white mb-4">Pending Income Withdrawal Requests</h2>
+            {incomeWithdrawals.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">No pending withdrawal requests</div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="text-left text-gray-400 text-sm border-b border-gray-700">
+                      <th className="pb-3 font-medium">User</th>
+                      <th className="pb-3 font-medium">Type</th>
+                      <th className="pb-3 font-medium text-right">Amount</th>
+                      <th className="pb-3 font-medium">Requested</th>
+                      <th className="pb-3 font-medium text-center">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {incomeWithdrawals.map((req) => (
+                      <tr key={req._id} className="border-b border-gray-800 hover:bg-dark-700">
+                        <td className="py-3">
+                          <div>
+                            <p className="text-white font-medium">{req.ibUserId?.firstName} {req.ibUserId?.lastName}</p>
+                            <p className="text-gray-500 text-xs">{req.ibUserId?.email}</p>
+                          </div>
+                        </td>
+                        <td className="py-3">
+                          <span className={`px-2 py-1 rounded text-xs font-medium ${
+                            req.withdrawalType === 'DIRECT' 
+                              ? 'bg-cyan-500/20 text-cyan-400' 
+                              : 'bg-yellow-500/20 text-yellow-400'
+                          }`}>
+                            {req.withdrawalType}
+                          </span>
+                        </td>
+                        <td className="py-3 text-right">
+                          <span className="text-accent-green font-bold">${req.amount?.toFixed(2)}</span>
+                        </td>
+                        <td className="py-3 text-gray-400 text-sm">
+                          {new Date(req.requestedAt).toLocaleDateString()}
+                        </td>
+                        <td className="py-3 text-center">
+                          <div className="flex items-center justify-center gap-2">
+                            <button
+                              onClick={() => handleApproveIncomeWithdrawal(req._id)}
+                              className="px-3 py-1 bg-green-500/20 text-green-400 rounded hover:bg-green-500/30 text-sm"
+                            >
+                              Approve
+                            </button>
+                            <button
+                              onClick={() => handleRejectIncomeWithdrawal(req._id)}
+                              className="px-3 py-1 bg-red-500/20 text-red-400 rounded hover:bg-red-500/30 text-sm"
+                            >
+                              Reject
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Withdrawal Settings Tab */}
+      {activeTab === 'withdrawal-settings' && (
+        <div className="space-y-6">
+          <div className="bg-dark-800 rounded-xl p-6 border border-gray-800">
+            <h2 className="text-xl font-bold text-white mb-6">Withdrawal Settings</h2>
+            
+            {/* Direct Income Settings */}
+            <div className="mb-6 pb-6 border-b border-gray-700">
+              <h3 className="text-lg font-medium text-cyan-400 mb-4">Direct Income Withdrawal</h3>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-white">Enable Direct Income Withdrawal</p>
+                  <p className="text-gray-500 text-sm">Allow users to withdraw direct joining income</p>
+                </div>
+                <button
+                  onClick={() => setWithdrawalSettings(prev => ({ ...prev, directIncomeWithdrawalEnabled: !prev.directIncomeWithdrawalEnabled }))}
+                  className={`w-12 h-6 rounded-full transition-colors ${withdrawalSettings.directIncomeWithdrawalEnabled ? 'bg-accent-green' : 'bg-gray-600'}`}
+                >
+                  <div className={`w-5 h-5 bg-white rounded-full transition-transform ${withdrawalSettings.directIncomeWithdrawalEnabled ? 'translate-x-6' : 'translate-x-0.5'}`} />
+                </button>
+              </div>
+            </div>
+
+            {/* Referral Income Settings */}
+            <div className="mb-6 pb-6 border-b border-gray-700">
+              <h3 className="text-lg font-medium text-yellow-400 mb-4">Referral Income Withdrawal</h3>
+              
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-white">Enable Referral Income Withdrawal</p>
+                    <p className="text-gray-500 text-sm">Allow users to withdraw referral income</p>
+                  </div>
+                  <button
+                    onClick={() => setWithdrawalSettings(prev => ({ ...prev, referralIncomeWithdrawalEnabled: !prev.referralIncomeWithdrawalEnabled }))}
+                    className={`w-12 h-6 rounded-full transition-colors ${withdrawalSettings.referralIncomeWithdrawalEnabled ? 'bg-accent-green' : 'bg-gray-600'}`}
+                  >
+                    <div className={`w-5 h-5 bg-white rounded-full transition-transform ${withdrawalSettings.referralIncomeWithdrawalEnabled ? 'translate-x-6' : 'translate-x-0.5'}`} />
+                  </button>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-white">Require Admin Approval</p>
+                    <p className="text-gray-500 text-sm">Referral withdrawals need admin approval</p>
+                  </div>
+                  <button
+                    onClick={() => setWithdrawalSettings(prev => ({ ...prev, referralIncomeRequiresApproval: !prev.referralIncomeRequiresApproval }))}
+                    className={`w-12 h-6 rounded-full transition-colors ${withdrawalSettings.referralIncomeRequiresApproval ? 'bg-accent-green' : 'bg-gray-600'}`}
+                  >
+                    <div className={`w-5 h-5 bg-white rounded-full transition-transform ${withdrawalSettings.referralIncomeRequiresApproval ? 'translate-x-6' : 'translate-x-0.5'}`} />
+                  </button>
+                </div>
+
+                <div>
+                  <label className="text-white block mb-2">Lock Period (Days)</label>
+                  <p className="text-gray-500 text-sm mb-2">Days before referral income can be withdrawn</p>
+                  <input
+                    type="number"
+                    min="0"
+                    value={withdrawalSettings.referralIncomeWithdrawalLockDays}
+                    onChange={(e) => setWithdrawalSettings(prev => ({ ...prev, referralIncomeWithdrawalLockDays: parseInt(e.target.value) || 0 }))}
+                    className="w-32 px-4 py-2 bg-dark-600 border border-gray-600 rounded-lg text-white"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* General Settings */}
+            <div className="mb-6">
+              <h3 className="text-lg font-medium text-white mb-4">General</h3>
+              <div>
+                <label className="text-white block mb-2">Minimum Withdrawal Amount ($)</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={withdrawalSettings.minWithdrawalAmount}
+                  onChange={(e) => setWithdrawalSettings(prev => ({ ...prev, minWithdrawalAmount: parseFloat(e.target.value) || 0 }))}
+                  className="w-32 px-4 py-2 bg-dark-600 border border-gray-600 rounded-lg text-white"
+                />
+              </div>
+            </div>
+
+            {/* Save Button */}
+            <div className="flex justify-end">
+              <button
+                onClick={saveWithdrawalSettings}
+                disabled={saving}
+                className="flex items-center gap-2 px-6 py-3 bg-accent-green text-black font-medium rounded-lg hover:bg-accent-green/90 disabled:opacity-50"
+              >
+                {saving ? <RefreshCw size={16} className="animate-spin" /> : <Save size={16} />}
+                Save Settings
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Income Report Tab */}
+      {activeTab === 'income-report' && (
+        <div className="space-y-6">
+          {/* Summary Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="bg-dark-800 rounded-xl p-6 border border-gray-800">
+              <p className="text-gray-400 text-sm mb-2">Total Direct Income</p>
+              <p className="text-2xl font-bold text-cyan-400">${incomeReport.totals?.directJoining?.toFixed(2) || '0.00'}</p>
+              <p className="text-xs text-gray-500 mt-1">From signups</p>
+            </div>
+            <div className="bg-dark-800 rounded-xl p-6 border border-gray-800">
+              <p className="text-gray-400 text-sm mb-2">Total Referral Income</p>
+              <p className="text-2xl font-bold text-yellow-400">${incomeReport.totals?.referralIncome?.toFixed(2) || '0.00'}</p>
+              <p className="text-xs text-gray-500 mt-1">From trades</p>
+            </div>
+            <div className="bg-dark-800 rounded-xl p-6 border border-gray-800">
+              <p className="text-gray-400 text-sm mb-2">Total Commission Paid</p>
+              <p className="text-2xl font-bold text-accent-green">${incomeReport.totals?.total?.toFixed(2) || '0.00'}</p>
+              <p className="text-xs text-gray-500 mt-1">All time</p>
+            </div>
+          </div>
+
+          {/* User-wise Breakdown Table */}
+          <div className="bg-dark-800 rounded-xl p-6 border border-gray-800">
+            <h2 className="text-xl font-bold text-white mb-4">User-wise Income Breakdown</h2>
+            {incomeReport.users?.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">No commission data found</div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="text-left text-gray-400 text-sm border-b border-gray-700">
+                      <th className="pb-3 font-medium">User</th>
+                      <th className="pb-3 font-medium">Email</th>
+                      <th className="pb-3 font-medium text-right">Direct Income</th>
+                      <th className="pb-3 font-medium text-right">Referral Income</th>
+                      <th className="pb-3 font-medium text-right">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {incomeReport.users?.map((user, index) => (
+                      <tr key={user.userId || index} className="border-b border-gray-800 hover:bg-dark-700">
+                        <td className="py-3 text-white font-medium">{user.userName || 'Unknown'}</td>
+                        <td className="py-3 text-gray-400 text-sm">{user.email || '-'}</td>
+                        <td className="py-3 text-right">
+                          <span className="text-cyan-400 font-medium">${user.directJoining?.total?.toFixed(2) || '0.00'}</span>
+                          {user.directJoining?.count > 0 && (
+                            <span className="text-gray-500 text-xs ml-1">({user.directJoining.count})</span>
+                          )}
+                        </td>
+                        <td className="py-3 text-right">
+                          <span className="text-yellow-400 font-medium">${user.referralIncome?.total?.toFixed(2) || '0.00'}</span>
+                          {user.referralIncome?.count > 0 && (
+                            <span className="text-gray-500 text-xs ml-1">({user.referralIncome.count})</span>
+                          )}
+                        </td>
+                        <td className="py-3 text-right">
+                          <span className="text-accent-green font-bold">${user.totalIncome?.toFixed(2) || '0.00'}</span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Referral Income Plan Tab */}
       {activeTab === 'referral-income' && referralPlan && (
         <div className="space-y-6">
@@ -815,11 +1173,11 @@ const AdminIBManagement = () => {
                   <div className="flex items-center gap-2">
                     <span className="text-gray-500">$</span>
                     <input
-                      type="number"
-                      step="0.1"
-                      min="0"
+                      type="text"
+                      inputMode="decimal"
                       value={level.amount}
                       onChange={(e) => updateReferralLevel(index, e.target.value)}
+                      onBlur={(e) => updateReferralLevel(index, e.target.value === '' ? '0' : e.target.value)}
                       className="w-full px-3 py-2 bg-dark-600 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-accent-green"
                     />
                   </div>
@@ -831,7 +1189,7 @@ const AdminIBManagement = () => {
             <div className="flex items-center justify-between pt-4 border-t border-gray-700">
               <div className="text-gray-400">
                 <span className="font-medium text-white">{referralPlan.levels.length}</span> levels |
-                Total per lot: <span className="font-medium text-accent-green">${referralPlan.levels.reduce((sum, l) => sum + l.amount, 0).toFixed(2)}</span>
+                Total per lot: <span className="font-medium text-accent-green">${referralPlan.levels.reduce((sum, l) => sum + (parseFloat(l.amount) || 0), 0).toFixed(2)}</span>
               </div>
               <button
                 onClick={saveReferralPlan}
@@ -893,12 +1251,11 @@ const AdminIBManagement = () => {
                   <label className="block text-gray-400 text-sm mb-2">Level {level.level}</label>
                   <div className="flex items-center gap-2">
                     <input
-                      type="number"
-                      step="0.5"
-                      min="0"
-                      max="100"
+                      type="text"
+                      inputMode="decimal"
                       value={level.percentage}
                       onChange={(e) => updateJoiningLevel(index, e.target.value)}
+                      onBlur={(e) => updateJoiningLevel(index, e.target.value === '' ? '0' : e.target.value)}
                       className="w-full px-3 py-2 bg-dark-600 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-accent-green"
                     />
                     <span className="text-gray-500">%</span>
@@ -910,7 +1267,7 @@ const AdminIBManagement = () => {
             <div className="flex items-center justify-between pt-4 border-t border-gray-700">
               <div className="text-gray-400">
                 <span className="font-medium text-white">{joiningPlan.levels.length}</span> levels |
-                Total: <span className="font-medium text-purple-400">{joiningPlan.levels.reduce((sum, l) => sum + l.percentage, 0).toFixed(1)}%</span>
+                Total: <span className="font-medium text-purple-400">{joiningPlan.levels.reduce((sum, l) => sum + (parseFloat(l.percentage) || 0), 0).toFixed(1)}%</span>
               </div>
               <button
                 onClick={saveJoiningPlan}

@@ -53,7 +53,10 @@ class DirectReferralEngine {
     }
 
     // Check if this is the correct activation trigger
-    if (settings.directJoiningIncome.requireActivation && 
+    // REGISTRATION always triggers commission (signup pe turant milega)
+    // Other triggers (FIRST_DEPOSIT, FIRST_TRADE, KYC_APPROVED) check settings
+    if (activationTrigger !== 'REGISTRATION' && 
+        settings.directJoiningIncome.requireActivation && 
         settings.directJoiningIncome.activationCriteria !== activationTrigger) {
       return {
         processed: false,
