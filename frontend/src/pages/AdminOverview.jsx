@@ -77,8 +77,8 @@ const AdminOverview = () => {
               totalUsers: userList.length,
               activeToday: Math.floor(userList.length * 0.7),
               newThisWeek: Math.floor(userList.length * 0.3),
-              totalDeposits: 125000,
-              totalWithdrawals: 45000,
+              totalDeposits: 0,
+              totalWithdrawals: 0,
               pendingKYC: Math.floor(userList.length * 0.2)
             })
             setLoading(false)
@@ -99,8 +99,8 @@ const AdminOverview = () => {
           totalUsers: userList.length,
           activeToday: Math.floor(userList.length * 0.7),
           newThisWeek: Math.floor(userList.length * 0.3),
-          totalDeposits: 125000,
-          totalWithdrawals: 45000,
+          totalDeposits: 0,
+          totalWithdrawals: 0,
           pendingKYC: Math.floor(userList.length * 0.2)
         })
       }
