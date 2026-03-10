@@ -20,7 +20,7 @@ const chargesSchema = new mongoose.Schema({
   },
   segment: {
     type: String,
-    enum: ['Forex', 'Crypto', 'Commodities', 'Indices', 'Metals', null],
+    enum: ['Forex', 'Crypto', 'Commodities', 'Indices', 'Metals', '', null],
     default: null
   },
   accountTypeId: {
