@@ -25,16 +25,37 @@ class TradeEngine {
   }
 
   // Calculate execution price with spread
-  calculateExecutionPrice(side, bid, ask, spreadValue, spreadType) {
-    let spread = spreadValue
+  // spreadValue is in PIPS for Forex, CENTS for Metals, USD for Crypto
+  calculateExecutionPrice(side, bid, ask, spreadValue, spreadType, symbol = '') {
+    let spreadInPrice = 0
+    
     if (spreadType === 'PERCENTAGE') {
-      spread = (ask - bid) * (spreadValue / 100)
+      spreadInPrice = (ask - bid) * (spreadValue / 100)
+    } else {
+      // FIXED spread - convert from pips/cents/usd to price units
+      const isJPYPair = symbol.includes('JPY')
+      const isMetal = ['XAUUSD', 'XAGUSD'].includes(symbol)
+      const isCrypto = ['BTCUSD', 'ETHUSD', 'LTCUSD', 'XRPUSD', 'BCHUSD', 'BNBUSD', 'SOLUSD', 'ADAUSD', 'DOGEUSD', 'DOTUSD', 'MATICUSD', 'AVAXUSD', 'LINKUSD'].includes(symbol)
+      
+      if (isCrypto) {
+        // Crypto: spread value is in USD directly
+        spreadInPrice = spreadValue
+      } else if (isMetal) {
+        // Metals: spread value is in cents (e.g., 50 = $0.50)
+        spreadInPrice = spreadValue * 0.01
+      } else if (isJPYPair) {
+        // JPY pairs: 1 pip = 0.01
+        spreadInPrice = spreadValue * 0.01
+      } else {
+        // Standard Forex: 1 pip = 0.0001
+        spreadInPrice = spreadValue * 0.0001
+      }
     }
     
     if (side === 'BUY') {
-      return ask + spread
+      return ask + spreadInPrice
     } else {
-      return bid - spread
+      return bid - spreadInPrice
     }
   }
 
