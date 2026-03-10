@@ -134,8 +134,8 @@ const AdminForexCharges = () => {
   const openEditModal = (charge, type) => {
     setEditingCharge(charge)
     setForm({
-      level: charge.level || 'SEGMENT',
-      segment: charge.segment || 'Forex',
+      level: charge.level || 'GLOBAL',
+      segment: charge.segment ?? '',
       instrumentSymbol: charge.instrumentSymbol || '',
       userId: charge.userId?._id || charge.userId || '',
       accountTypeId: charge.accountTypeId?._id || charge.accountTypeId || '',
@@ -166,8 +166,8 @@ const AdminForexCharges = () => {
 
   const resetForm = () => {
     setForm({
-      level: 'SEGMENT',
-      segment: 'Forex',
+      level: 'GLOBAL',
+      segment: '',
       instrumentSymbol: '',
       userId: '',
       accountTypeId: '',
