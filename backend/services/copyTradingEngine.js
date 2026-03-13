@@ -509,6 +509,9 @@ class CopyTradingEngine {
           copyValue: follower.copyValue,
           masterOpenPrice: masterTrade.openPrice,
           followerOpenPrice: followerTrade.openPrice,
+          // Store master's SL/TP for follower display
+          masterStopLoss: masterTrade.stopLoss || null,
+          masterTakeProfit: masterTrade.takeProfit || null,
           // Store equity snapshots for audit/proof (equity-based system)
           masterEquitySnapshot: masterEquity,
           followerEquitySnapshot: followerEquity,
@@ -579,6 +582,11 @@ class CopyTradingEngine {
     const results = await Promise.all(copyTrades.map(async (copyTrade) => {
       try {
         await tradeEngine.modifyTrade(copyTrade.followerTradeId, newSl, newTp)
+        // Also update the CopyTrade record with new SL/TP for follower display
+        await CopyTrade.findByIdAndUpdate(copyTrade._id, {
+          masterStopLoss: newSl,
+          masterTakeProfit: newTp
+        })
         return {
           copyTradeId: copyTrade._id,
           status: 'SUCCESS'

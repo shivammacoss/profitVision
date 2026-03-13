@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import AdminLayout from '../components/AdminLayout'
+import { useTheme } from '../context/ThemeContext'
 import { 
   Plus,
   Edit,
@@ -13,6 +14,7 @@ import {
 import { API_URL } from '../config/api'
 
 const AdminAccountTypes = () => {
+  const { isDarkMode } = useTheme()
   const [accountTypes, setAccountTypes] = useState([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
@@ -261,9 +263,9 @@ const AdminAccountTypes = () => {
       {/* Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-dark-800 rounded-xl p-4 sm:p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto border border-gray-700 shadow-xl">
+          <div className={`rounded-xl p-4 sm:p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto border shadow-xl ${isDarkMode ? 'bg-dark-800 border-gray-700' : 'bg-white border-gray-200'}`}>
             <div className="flex items-center justify-between mb-4 sm:mb-6">
-              <h3 className="text-white font-semibold text-base sm:text-lg">
+              <h3 className={`font-semibold text-base sm:text-lg ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                 {editingType ? 'Edit Account Type' : 'Create Account Type'}
               </h3>
               <button onClick={() => { setShowModal(false); resetForm(); }} className="text-gray-400 hover:text-white">
@@ -279,7 +281,7 @@ const AdminAccountTypes = () => {
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   placeholder="e.g., Standard, Premium, VIP"
-                  className="w-full bg-dark-700 border border-gray-600 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 text-white placeholder-gray-500 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500"
+                  className={`w-full border rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 placeholder-gray-500 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 ${isDarkMode ? 'bg-dark-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'}`}
                 />
               </div>
 
@@ -290,7 +292,7 @@ const AdminAccountTypes = () => {
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   placeholder="Account type description"
                   rows={2}
-                  className="w-full bg-dark-700 border border-gray-600 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 text-white placeholder-gray-500 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500"
+                  className={`w-full border rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 placeholder-gray-500 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 ${isDarkMode ? 'bg-dark-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'}`}
                 />
               </div>
 
@@ -302,7 +304,7 @@ const AdminAccountTypes = () => {
                     value={formData.minDeposit}
                     onChange={(e) => setFormData({ ...formData, minDeposit: e.target.value })}
                     placeholder="100"
-                    className="w-full bg-dark-700 border border-gray-600 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 text-white placeholder-gray-500 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500"
+                    className={`w-full border rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 placeholder-gray-500 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 ${isDarkMode ? 'bg-dark-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'}`}
                   />
                 </div>
                 <div>
@@ -315,7 +317,7 @@ const AdminAccountTypes = () => {
                       value={formData.leverage.replace('1:', '')}
                       onChange={(e) => setFormData({ ...formData, leverage: `1:${e.target.value}` })}
                       placeholder="100"
-                      className="flex-1 bg-dark-700 border border-gray-600 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 text-white placeholder-gray-500 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500"
+                      className={`flex-1 border rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 placeholder-gray-500 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 ${isDarkMode ? 'bg-dark-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'}`}
                     />
                   </div>
                   <p className="text-gray-500 text-xs mt-1">e.g., 100, 500, 1000</p>
@@ -329,7 +331,7 @@ const AdminAccountTypes = () => {
                   value={formData.exposureLimit}
                   onChange={(e) => setFormData({ ...formData, exposureLimit: e.target.value })}
                   placeholder="0 for unlimited"
-                  className="w-full bg-dark-700 border border-gray-600 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 text-white placeholder-gray-500 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500"
+                  className={`w-full border rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 placeholder-gray-500 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 ${isDarkMode ? 'bg-dark-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'}`}
                 />
               </div>
 
@@ -343,7 +345,7 @@ const AdminAccountTypes = () => {
                     value={formData.minSpread}
                     onChange={(e) => setFormData({ ...formData, minSpread: e.target.value })}
                     placeholder="0"
-                    className="w-full bg-dark-700 border border-gray-600 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 text-white placeholder-gray-500 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500"
+                    className={`w-full border rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 placeholder-gray-500 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 ${isDarkMode ? 'bg-dark-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'}`}
                   />
                 </div>
                 <div>
@@ -354,7 +356,7 @@ const AdminAccountTypes = () => {
                     value={formData.commission}
                     onChange={(e) => setFormData({ ...formData, commission: e.target.value })}
                     placeholder="0"
-                    className="w-full bg-dark-700 border border-gray-600 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 text-white placeholder-gray-500 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500"
+                    className={`w-full border rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 placeholder-gray-500 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 ${isDarkMode ? 'bg-dark-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'}`}
                   />
                 </div>
               </div>

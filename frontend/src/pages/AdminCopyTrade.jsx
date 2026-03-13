@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import AdminLayout from '../components/AdminLayout'
+import { useTheme } from '../context/ThemeContext'
 import { 
   Copy,
   Plus,
@@ -19,6 +20,7 @@ import {
 import { API_URL } from '../config/api'
 
 const AdminCopyTrade = () => {
+  const { isDarkMode } = useTheme()
   const [searchTerm, setSearchTerm] = useState('')
   const [activeTab, setActiveTab] = useState('masters')
   const [masters, setMasters] = useState([])
@@ -217,35 +219,35 @@ const AdminCopyTrade = () => {
     <AdminLayout title="Copy Trade Management" subtitle="Manage master traders and copy trading">
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <div className="bg-dark-800 rounded-xl p-5 border border-gray-800">
+        <div className={`rounded-xl p-5 border ${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'}`}>
           <div className="flex items-center gap-2 mb-2">
             <Star size={18} className="text-yellow-500" />
-            <p className="text-gray-500 text-sm">Master Traders</p>
+            <p className={`text-sm ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>Master Traders</p>
           </div>
-          <p className="text-white text-2xl font-bold">{dashboard?.masters?.active || 0}</p>
+          <p className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{dashboard?.masters?.active || 0}</p>
           <p className="text-yellow-500 text-xs">{dashboard?.masters?.pending || 0} pending</p>
         </div>
-        <div className="bg-dark-800 rounded-xl p-5 border border-gray-800">
+        <div className={`rounded-xl p-5 border ${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'}`}>
           <div className="flex items-center gap-2 mb-2">
             <Users size={18} className="text-blue-500" />
-            <p className="text-gray-500 text-sm">Total Followers</p>
+            <p className={`text-sm ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>Total Followers</p>
           </div>
-          <p className="text-white text-2xl font-bold">{dashboard?.followers?.active || 0}</p>
+          <p className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{dashboard?.followers?.active || 0}</p>
         </div>
-        <div className="bg-dark-800 rounded-xl p-5 border border-gray-800">
+        <div className={`rounded-xl p-5 border ${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'}`}>
           <div className="flex items-center gap-2 mb-2">
             <TrendingUp size={18} className="text-green-500" />
-            <p className="text-gray-500 text-sm">Copied Trades</p>
+            <p className={`text-sm ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>Copied Trades</p>
           </div>
-          <p className="text-white text-2xl font-bold">{dashboard?.copyTrades?.total || 0}</p>
+          <p className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{dashboard?.copyTrades?.total || 0}</p>
           <p className="text-blue-500 text-xs">{dashboard?.copyTrades?.open || 0} open</p>
         </div>
-        <div className="bg-dark-800 rounded-xl p-5 border border-gray-800">
+        <div className={`rounded-xl p-5 border ${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'}`}>
           <div className="flex items-center gap-2 mb-2">
             <DollarSign size={18} className="text-purple-500" />
-            <p className="text-gray-500 text-sm">Admin Pool</p>
+            <p className={`text-sm ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>Admin Pool</p>
           </div>
-          <p className="text-white text-2xl font-bold">${dashboard?.adminPool?.toFixed(2) || '0.00'}</p>
+          <p className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>${dashboard?.adminPool?.toFixed(2) || '0.00'}</p>
         </div>
       </div>
 

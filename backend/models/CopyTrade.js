@@ -77,6 +77,15 @@ const copyTradeSchema = new mongoose.Schema({
     type: Number,
     default: null
   },
+  // Master's SL/TP (for follower display)
+  masterStopLoss: {
+    type: Number,
+    default: null
+  },
+  masterTakeProfit: {
+    type: Number,
+    default: null
+  },
   // Equity snapshots at calculation time (for audit/proof)
   masterEquitySnapshot: {
     type: Number,

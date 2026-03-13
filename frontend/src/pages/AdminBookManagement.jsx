@@ -628,47 +628,47 @@ const AdminBookManagement = () => {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-dark-800 rounded-xl p-4 border border-gray-800">
+        <div className={`rounded-xl p-4 border ${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'}`}>
           <div className="flex items-center gap-3">
             <div className="p-2 bg-red-500/20 rounded-lg">
               <Users className="w-5 h-5 text-blue-400" />
             </div>
             <div>
-              <p className="text-gray-400 text-sm">A-Book Users</p>
-              <p className="text-xl font-bold text-white">{stats.aBook?.users || 0}</p>
+              <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>A-Book Users</p>
+              <p className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{stats.aBook?.users || 0}</p>
             </div>
           </div>
         </div>
-        <div className="bg-dark-800 rounded-xl p-4 border border-gray-800">
+        <div className={`rounded-xl p-4 border ${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'}`}>
           <div className="flex items-center gap-3">
             <div className="p-2 bg-green-500/20 rounded-lg">
               <Users className="w-5 h-5 text-green-400" />
             </div>
             <div>
-              <p className="text-gray-400 text-sm">B-Book Users</p>
-              <p className="text-xl font-bold text-white">{stats.bBook?.users || 0}</p>
+              <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>B-Book Users</p>
+              <p className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{stats.bBook?.users || 0}</p>
             </div>
           </div>
         </div>
-        <div className="bg-dark-800 rounded-xl p-4 border border-gray-800">
+        <div className={`rounded-xl p-4 border ${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'}`}>
           <div className="flex items-center gap-3">
             <div className="p-2 bg-purple-500/20 rounded-lg">
               <Activity className="w-5 h-5 text-purple-400" />
             </div>
             <div>
-              <p className="text-gray-400 text-sm">A-Book Open Trades</p>
-              <p className="text-xl font-bold text-white">{stats.aBook?.openTrades || 0}</p>
+              <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>A-Book Open Trades</p>
+              <p className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{stats.aBook?.openTrades || 0}</p>
             </div>
           </div>
         </div>
-        <div className="bg-dark-800 rounded-xl p-4 border border-gray-800">
+        <div className={`rounded-xl p-4 border ${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'}`}>
           <div className="flex items-center gap-3">
             <div className="p-2 bg-orange-500/20 rounded-lg">
               <Activity className="w-5 h-5 text-orange-400" />
             </div>
             <div>
-              <p className="text-gray-400 text-sm">B-Book Open Trades</p>
-              <p className="text-xl font-bold text-white">{stats.bBook?.openTrades || 0}</p>
+              <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>B-Book Open Trades</p>
+              <p className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{stats.bBook?.openTrades || 0}</p>
             </div>
           </div>
         </div>
@@ -683,13 +683,13 @@ const AdminBookManagement = () => {
             placeholder="Search by name or email..."
             value={searchTerm}
             onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1) }}
-            className="w-full pl-10 pr-4 py-2 bg-dark-700 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-accent-green"
+            className={`w-full pl-10 pr-4 py-2 border rounded-lg placeholder-gray-500 focus:outline-none focus:border-accent-green ${isDarkMode ? 'bg-dark-700 border-gray-700 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'}`}
           />
         </div>
         <select
           value={bookFilter}
           onChange={(e) => { setBookFilter(e.target.value); setCurrentPage(1) }}
-          className="px-4 py-2 bg-dark-700 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-accent-green"
+          className={`px-4 py-2 border rounded-lg focus:outline-none focus:border-accent-green ${isDarkMode ? 'bg-dark-700 border-gray-700 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'}`}
         >
           <option value="">All Books</option>
           <option value="A">A-Book Only</option>
@@ -697,7 +697,7 @@ const AdminBookManagement = () => {
         </select>
         <button
           onClick={() => { fetchUsers(); fetchStats() }}
-          className="p-2 bg-dark-700 border border-gray-700 rounded-lg text-gray-400 hover:text-white hover:border-accent-green transition-colors"
+          className={`p-2 border rounded-lg transition-colors ${isDarkMode ? 'bg-dark-700 border-gray-700 text-gray-400 hover:text-white hover:border-accent-green' : 'bg-gray-100 border-gray-300 text-gray-600 hover:text-gray-900 hover:border-accent-green'}`}
         >
           <RefreshCw className="w-5 h-5" />
         </button>
@@ -787,13 +787,13 @@ const AdminBookManagement = () => {
                         <div className="w-8 h-8 rounded-full bg-gradient-to-br from-accent-green to-blue-500 flex items-center justify-center text-white font-medium text-sm">
                           {user.firstName?.charAt(0) || 'U'}
                         </div>
-                        <span className="text-white font-medium">{user.firstName || 'Unknown'}</span>
+                        <span className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{user.firstName || 'Unknown'}</span>
                       </div>
                     </td>
                     <td className="px-4 py-3 text-gray-400">{user.email}</td>
-                    <td className="px-4 py-3 text-center text-white">{user.accountCount || 0}</td>
-                    <td className="px-4 py-3 text-center text-white">{user.totalTrades || 0}</td>
-                    <td className="px-4 py-3 text-center text-white">{user.openTrades || 0}</td>
+                    <td className={`px-4 py-3 text-center ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{user.accountCount || 0}</td>
+                    <td className={`px-4 py-3 text-center ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{user.totalTrades || 0}</td>
+                    <td className={`px-4 py-3 text-center ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{user.openTrades || 0}</td>
                     <td className="px-4 py-3 text-center">
                       <span className={`px-3 py-1 rounded-full text-xs font-medium ${
                         user.bookType === 'A' 
@@ -832,7 +832,7 @@ const AdminBookManagement = () => {
 
         {/* Pagination */}
         {pagination.pages > 1 && (
-          <div className="flex items-center justify-between px-4 py-3 border-t border-gray-800">
+          <div className={`flex items-center justify-between px-4 py-3 border-t ${isDarkMode ? 'border-gray-800' : 'border-gray-200'}`}>
             <span className="text-sm text-gray-400">
               Showing {((currentPage - 1) * 20) + 1} to {Math.min(currentPage * 20, pagination.total)} of {pagination.total} users
             </span>
@@ -840,15 +840,15 @@ const AdminBookManagement = () => {
               <button
                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
-                className="p-2 bg-dark-700 border border-gray-700 rounded-lg text-gray-400 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                className={`p-2 border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed ${isDarkMode ? 'bg-dark-700 border-gray-700 text-gray-400 hover:text-white' : 'bg-gray-100 border-gray-300 text-gray-600 hover:text-gray-900'}`}
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
-              <span className="text-white">Page {currentPage} of {pagination.pages}</span>
+              <span className={isDarkMode ? 'text-white' : 'text-gray-900'}>Page {currentPage} of {pagination.pages}</span>
               <button
                 onClick={() => setCurrentPage(p => Math.min(pagination.pages, p + 1))}
                 disabled={currentPage === pagination.pages}
-                className="p-2 bg-dark-700 border border-gray-700 rounded-lg text-gray-400 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                className={`p-2 border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed ${isDarkMode ? 'bg-dark-700 border-gray-700 text-gray-400 hover:text-white' : 'bg-gray-100 border-gray-300 text-gray-600 hover:text-gray-900'}`}
               >
                 <ChevronRight className="w-4 h-4" />
               </button>

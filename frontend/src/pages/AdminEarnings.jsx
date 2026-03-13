@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import AdminLayout from '../components/AdminLayout'
+import { useTheme } from '../context/ThemeContext'
 import { 
   DollarSign,
   TrendingUp,
@@ -14,6 +15,7 @@ import {
 import { API_URL } from '../config/api'
 
 const AdminEarnings = () => {
+  const { isDarkMode } = useTheme()
   const [summary, setSummary] = useState(null)
   const [dailyEarnings, setDailyEarnings] = useState([])
   const [userEarnings, setUserEarnings] = useState([])
@@ -94,7 +96,7 @@ const AdminEarnings = () => {
   }
 
   const StatCard = ({ title, value, subtitle, icon: Icon, color }) => (
-    <div className="bg-dark-800 rounded-xl border border-gray-800 p-4 sm:p-5">
+    <div className={`rounded-xl border p-4 sm:p-5 ${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'}`}>
       <div className="flex items-start justify-between">
         <div>
           <p className="text-gray-400 text-sm">{title}</p>
@@ -118,7 +120,7 @@ const AdminEarnings = () => {
           <select
             value={dateRange}
             onChange={(e) => setDateRange(e.target.value)}
-            className="px-3 py-2 bg-dark-800 border border-gray-700 rounded-lg text-white text-sm"
+            className={`px-3 py-2 border rounded-lg text-sm ${isDarkMode ? 'bg-dark-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'}`}
           >
             <option value="7">Last 7 Days</option>
             <option value="30">Last 30 Days</option>
@@ -127,7 +129,7 @@ const AdminEarnings = () => {
           </select>
           <button 
             onClick={fetchAllData}
-            className="p-2 bg-dark-800 hover:bg-dark-700 rounded-lg text-gray-400"
+            className={`p-2 rounded-lg text-gray-400 ${isDarkMode ? 'bg-dark-800 hover:bg-dark-700' : 'bg-gray-100 hover:bg-gray-200'}`}
           >
             <RefreshCw size={18} />
           </button>
@@ -182,8 +184,8 @@ const AdminEarnings = () => {
           {/* Breakdown Cards */}
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-6">
             {/* Commission Breakdown */}
-            <div className="bg-dark-800 rounded-xl border border-gray-800 p-5">
-              <h3 className="text-white font-semibold mb-4">Commission Earnings</h3>
+            <div className={`rounded-xl border p-5 ${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'}`}>
+              <h3 className={`font-semibold mb-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Commission Earnings</h3>
               <div className="space-y-3">
                 <div className="flex justify-between">
                   <span className="text-gray-400">Today</span>
@@ -205,8 +207,8 @@ const AdminEarnings = () => {
             </div>
 
             {/* Swap Breakdown */}
-            <div className="bg-dark-800 rounded-xl border border-gray-800 p-5">
-              <h3 className="text-white font-semibold mb-4">Swap Earnings</h3>
+            <div className={`rounded-xl border p-5 ${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'}`}>
+              <h3 className={`font-semibold mb-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Swap Earnings</h3>
               <div className="space-y-3">
                 <div className="flex justify-between">
                   <span className="text-gray-400">Today</span>
@@ -228,8 +230,8 @@ const AdminEarnings = () => {
             </div>
 
             {/* IB Subscription Fees */}
-            <div className="bg-dark-800 rounded-xl border border-gray-800 p-5">
-              <h3 className="text-white font-semibold mb-4">IB Subscription Fees</h3>
+            <div className={`rounded-xl border p-5 ${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'}`}>
+              <h3 className={`font-semibold mb-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>IB Subscription Fees</h3>
               <div className="space-y-3">
                 <div className="flex justify-between">
                   <span className="text-gray-400">Today</span>
@@ -255,8 +257,8 @@ const AdminEarnings = () => {
             </div>
 
             {/* Volume Stats */}
-            <div className="bg-dark-800 rounded-xl border border-gray-800 p-5">
-              <h3 className="text-white font-semibold mb-4">Trading Volume (Lots)</h3>
+            <div className={`rounded-xl border p-5 ${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'}`}>
+              <h3 className={`font-semibold mb-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Trading Volume (Lots)</h3>
               <div className="space-y-3">
                 <div className="flex justify-between">
                   <span className="text-gray-400">Today</span>
@@ -302,10 +304,10 @@ const AdminEarnings = () => {
 
           {/* Daily Breakdown Table */}
           {activeTab === 'daily' && (
-            <div className="bg-dark-800 rounded-xl border border-gray-800 overflow-hidden">
+            <div className={`rounded-xl border overflow-hidden ${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'}`}>
               <div className="overflow-x-auto">
                 <table className="w-full">
-                  <thead className="bg-dark-700">
+                  <thead className={isDarkMode ? 'bg-dark-700' : 'bg-gray-50'}>
                     <tr>
                       <th className="text-left text-gray-400 text-xs font-medium px-4 py-3">Date</th>
                       <th className="text-right text-gray-400 text-xs font-medium px-4 py-3">Commission</th>
@@ -340,10 +342,10 @@ const AdminEarnings = () => {
 
           {/* By User Table */}
           {activeTab === 'users' && (
-            <div className="bg-dark-800 rounded-xl border border-gray-800 overflow-hidden">
+            <div className={`rounded-xl border overflow-hidden ${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'}`}>
               <div className="overflow-x-auto">
                 <table className="w-full">
-                  <thead className="bg-dark-700">
+                  <thead className={isDarkMode ? 'bg-dark-700' : 'bg-gray-50'}>
                     <tr>
                       <th className="text-left text-gray-400 text-xs font-medium px-4 py-3">User</th>
                       <th className="text-right text-gray-400 text-xs font-medium px-4 py-3">Commission</th>
@@ -383,10 +385,10 @@ const AdminEarnings = () => {
 
           {/* By Symbol Table */}
           {activeTab === 'symbols' && (
-            <div className="bg-dark-800 rounded-xl border border-gray-800 overflow-hidden">
+            <div className={`rounded-xl border overflow-hidden ${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'}`}>
               <div className="overflow-x-auto">
                 <table className="w-full">
-                  <thead className="bg-dark-700">
+                  <thead className={isDarkMode ? 'bg-dark-700' : 'bg-gray-50'}>
                     <tr>
                       <th className="text-left text-gray-400 text-xs font-medium px-4 py-3">Symbol</th>
                       <th className="text-right text-gray-400 text-xs font-medium px-4 py-3">Commission</th>

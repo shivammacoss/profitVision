@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import AdminLayout from '../components/AdminLayout'
+import { useTheme } from '../context/ThemeContext'
 import { 
   TrendingUp,
   TrendingDown,
@@ -22,6 +23,7 @@ import priceStreamService from '../services/priceStream'
 import { API_URL } from '../config/api'
 
 const AdminTradeManagement = () => {
+  const { isDarkMode } = useTheme()
   const [searchTerm, setSearchTerm] = useState('')
   const [filterStatus, setFilterStatus] = useState('all')
   const [dateFrom, setDateFrom] = useState('')
@@ -466,20 +468,20 @@ const AdminTradeManagement = () => {
     <AdminLayout title="Trade Management" subtitle="Monitor and manage all trading activities">
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <div className="bg-dark-800 rounded-xl p-5 border border-gray-800">
-          <p className="text-gray-500 text-sm mb-1">Total Trades</p>
-          <p className="text-white text-2xl font-bold">{stats.total.toLocaleString()}</p>
+        <div className={`rounded-xl p-5 border ${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'}`}>
+          <p className={`text-sm mb-1 ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>Total Trades</p>
+          <p className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{stats.total.toLocaleString()}</p>
         </div>
-        <div className="bg-dark-800 rounded-xl p-5 border border-gray-800">
-          <p className="text-gray-500 text-sm mb-1">Open Positions</p>
-          <p className="text-white text-2xl font-bold">{stats.open}</p>
+        <div className={`rounded-xl p-5 border ${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'}`}>
+          <p className={`text-sm mb-1 ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>Open Positions</p>
+          <p className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{stats.open}</p>
         </div>
-        <div className="bg-dark-800 rounded-xl p-5 border border-gray-800">
-          <p className="text-gray-500 text-sm mb-1">Total Volume</p>
-          <p className="text-white text-2xl font-bold">${(stats.volume / 1000000).toFixed(2)}M</p>
+        <div className={`rounded-xl p-5 border ${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'}`}>
+          <p className={`text-sm mb-1 ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>Total Volume</p>
+          <p className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>${(stats.volume / 1000000).toFixed(2)}M</p>
         </div>
-        <div className="bg-dark-800 rounded-xl p-5 border border-gray-800">
-          <p className="text-gray-500 text-sm mb-1">Platform P&L</p>
+        <div className={`rounded-xl p-5 border ${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'}`}>
+          <p className={`text-sm mb-1 ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>Platform P&L</p>
           <p className={`text-2xl font-bold ${stats.pnl >= 0 ? 'text-green-500' : 'text-red-500'}`}>
             {stats.pnl >= 0 ? '+' : ''}${stats.pnl.toFixed(2)}
           </p>
@@ -487,35 +489,35 @@ const AdminTradeManagement = () => {
       </div>
 
       {/* Trades Table */}
-      <div className="bg-dark-800 rounded-xl border border-gray-800 overflow-hidden">
-        <div className="flex items-center gap-3 p-4 border-b border-gray-800 overflow-x-auto">
-          <h2 className="text-white font-semibold text-lg whitespace-nowrap">All Trades</h2>
+      <div className={`rounded-xl border overflow-hidden ${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'}`}>
+        <div className={`flex items-center gap-3 p-4 border-b overflow-x-auto ${isDarkMode ? 'border-gray-800' : 'border-gray-200'}`}>
+          <h2 className={`font-semibold text-lg whitespace-nowrap ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>All Trades</h2>
           <div className="flex items-center gap-2 flex-nowrap ml-auto">
-            <span className="text-gray-400 text-sm whitespace-nowrap">From:</span>
+            <span className={`text-sm whitespace-nowrap ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>From:</span>
             <input
               type="date"
               value={dateFrom}
               onChange={(e) => setDateFrom(e.target.value)}
-              className="bg-dark-700 border border-gray-700 rounded-lg px-2 py-1.5 text-white focus:outline-none focus:border-gray-600 text-sm"
+              className={`border rounded-lg px-2 py-1.5 focus:outline-none text-sm ${isDarkMode ? 'bg-dark-700 border-gray-700 text-white focus:border-gray-600' : 'bg-gray-50 border-gray-300 text-gray-900 focus:border-gray-400'}`}
             />
-            <span className="text-gray-400 text-sm whitespace-nowrap">To:</span>
+            <span className={`text-sm whitespace-nowrap ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>To:</span>
             <input
               type="date"
               value={dateTo}
               onChange={(e) => setDateTo(e.target.value)}
-              className="bg-dark-700 border border-gray-700 rounded-lg px-2 py-1.5 text-white focus:outline-none focus:border-gray-600 text-sm"
+              className={`border rounded-lg px-2 py-1.5 focus:outline-none text-sm ${isDarkMode ? 'bg-dark-700 border-gray-700 text-white focus:border-gray-600' : 'bg-gray-50 border-gray-300 text-gray-900 focus:border-gray-400'}`}
             />
             {(dateFrom || dateTo) && (
               <>
                 <button
                   onClick={() => { setDateFrom(''); setDateTo(''); }}
-                  className="p-1.5 bg-dark-700 hover:bg-dark-600 border border-gray-700 text-gray-400 hover:text-white rounded-lg transition-colors"
+                  className={`p-1.5 border rounded-lg transition-colors ${isDarkMode ? 'bg-dark-700 hover:bg-dark-600 border-gray-700 text-gray-400 hover:text-white' : 'bg-gray-100 hover:bg-gray-200 border-gray-300 text-gray-600 hover:text-gray-900'}`}
                   title="Clear date filter"
                 >
                   <X size={14} />
                 </button>
-                <div className="px-2 py-1.5 bg-dark-700 border border-gray-700 rounded-lg whitespace-nowrap">
-                  <span className="text-gray-400 text-sm">Selected P/L: </span>
+                <div className={`px-2 py-1.5 border rounded-lg whitespace-nowrap ${isDarkMode ? 'bg-dark-700 border-gray-700' : 'bg-gray-100 border-gray-300'}`}>
+                  <span className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Selected P/L: </span>
                   <span className={`font-bold ${filteredPnl >= 0 ? 'text-green-500' : 'text-red-500'}`}>
                     {filteredPnl >= 0 ? '+' : ''}${filteredPnl.toFixed(2)}
                   </span>
@@ -538,13 +540,13 @@ const AdminTradeManagement = () => {
                 placeholder="Search trades..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-32 bg-dark-700 border border-gray-700 rounded-lg pl-8 pr-2 py-1.5 text-white placeholder-gray-500 focus:outline-none focus:border-gray-600 text-sm"
+                className={`w-32 border rounded-lg pl-8 pr-2 py-1.5 placeholder-gray-500 focus:outline-none text-sm ${isDarkMode ? 'bg-dark-700 border-gray-700 text-white focus:border-gray-600' : 'bg-gray-50 border-gray-300 text-gray-900 focus:border-gray-400'}`}
               />
             </div>
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="bg-dark-700 border border-gray-700 rounded-lg px-2 py-1.5 text-white focus:outline-none focus:border-gray-600 text-sm"
+              className={`border rounded-lg px-2 py-1.5 focus:outline-none text-sm ${isDarkMode ? 'bg-dark-700 border-gray-700 text-white focus:border-gray-600' : 'bg-gray-50 border-gray-300 text-gray-900 focus:border-gray-400'}`}
             >
               <option value="all">All Status</option>
               <option value="open">Open</option>
@@ -563,10 +565,10 @@ const AdminTradeManagement = () => {
             {/* Mobile Card View */}
             <div className="block lg:hidden p-4 space-y-3">
               {filteredTrades.map((trade) => (
-                <div key={trade._id} className="bg-dark-700 rounded-xl p-4 border border-gray-700">
+                <div key={trade._id} className={`rounded-xl p-4 border ${isDarkMode ? 'bg-dark-700 border-gray-700' : 'bg-gray-50 border-gray-200'}`}>
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
-                      <span className="text-white font-medium">{trade.symbol}</span>
+                      <span className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{trade.symbol}</span>
                       <span className={`px-2 py-0.5 rounded text-xs font-medium ${
                         trade.side === 'BUY' ? 'bg-green-500/20 text-green-500' : 'bg-red-500/20 text-red-500'
                       }`}>
@@ -584,16 +586,16 @@ const AdminTradeManagement = () => {
                   <div className="grid grid-cols-2 gap-2 text-sm mb-3">
                     <div>
                       <p className="text-gray-500">User</p>
-                      <p className="text-white truncate">{trade.userId?.firstName || trade.userId?.email}</p>
+                      <p className={`truncate ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{trade.userId?.firstName || trade.userId?.email}</p>
                       <p className="text-gray-500 text-xs font-mono truncate">ID: {trade.userId?._id || 'N/A'}</p>
                     </div>
                     <div>
                       <p className="text-gray-500">Lots</p>
-                      <p className="text-white">{trade.quantity}</p>
+                      <p className={isDarkMode ? 'text-white' : 'text-gray-900'}>{trade.quantity}</p>
                     </div>
                     <div>
                       <p className="text-gray-500">Open Price</p>
-                      <p className="text-white">${trade.openPrice?.toFixed(5)}</p>
+                      <p className={isDarkMode ? 'text-white' : 'text-gray-900'}>${trade.openPrice?.toFixed(5)}</p>
                     </div>
                     <div>
                       <p className="text-gray-500">Live P&L</p>
@@ -627,34 +629,34 @@ const AdminTradeManagement = () => {
             <div className="hidden lg:block overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-gray-700">
-                    <th className="text-left text-gray-500 text-sm font-medium py-3 px-4">Trade ID</th>
-                    <th className="text-left text-gray-500 text-sm font-medium py-3 px-4">User</th>
-                    <th className="text-left text-gray-500 text-sm font-medium py-3 px-4">Symbol</th>
-                    <th className="text-left text-gray-500 text-sm font-medium py-3 px-4">Side</th>
-                    <th className="text-left text-gray-500 text-sm font-medium py-3 px-4">Lots</th>
-                    <th className="text-left text-gray-500 text-sm font-medium py-3 px-4">Open Price</th>
-                    <th className="text-left text-gray-500 text-sm font-medium py-3 px-4">P&L</th>
-                    <th className="text-left text-gray-500 text-sm font-medium py-3 px-4">Status</th>
-                    <th className="text-left text-gray-500 text-sm font-medium py-3 px-4">Actions</th>
+                  <tr className={`border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+                    <th className={`text-left text-sm font-medium py-3 px-4 ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>Trade ID</th>
+                    <th className={`text-left text-sm font-medium py-3 px-4 ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>User</th>
+                    <th className={`text-left text-sm font-medium py-3 px-4 ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>Symbol</th>
+                    <th className={`text-left text-sm font-medium py-3 px-4 ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>Side</th>
+                    <th className={`text-left text-sm font-medium py-3 px-4 ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>Lots</th>
+                    <th className={`text-left text-sm font-medium py-3 px-4 ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>Open Price</th>
+                    <th className={`text-left text-sm font-medium py-3 px-4 ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>P&L</th>
+                    <th className={`text-left text-sm font-medium py-3 px-4 ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>Status</th>
+                    <th className={`text-left text-sm font-medium py-3 px-4 ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredTrades.map((trade) => (
-                    <tr key={trade._id} className="border-b border-gray-800 hover:bg-dark-700/50">
-                      <td className="py-4 px-4 text-white font-mono text-sm">{trade.tradeId}</td>
+                    <tr key={trade._id} className={`border-b ${isDarkMode ? 'border-gray-800 hover:bg-dark-700/50' : 'border-gray-200 hover:bg-gray-50'}`}>
+                      <td className={`py-4 px-4 font-mono text-sm ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{trade.tradeId}</td>
                       <td className="py-4 px-4">
-                        <p className="text-white">{trade.userId?.firstName || trade.userId?.email}</p>
+                        <p className={isDarkMode ? 'text-white' : 'text-gray-900'}>{trade.userId?.firstName || trade.userId?.email}</p>
                         <p className="text-gray-500 text-xs font-mono">{trade.userId?._id || 'N/A'}</p>
                       </td>
-                      <td className="py-4 px-4 text-white font-medium">{trade.symbol}</td>
+                      <td className={`py-4 px-4 font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{trade.symbol}</td>
                       <td className="py-4 px-4">
                         <span className={`flex items-center gap-1 ${trade.side === 'BUY' ? 'text-green-500' : 'text-red-500'}`}>
                           {trade.side === 'BUY' ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
                           {trade.side}
                         </span>
                       </td>
-                      <td className="py-4 px-4 text-white">{trade.quantity}</td>
+                      <td className={`py-4 px-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{trade.quantity}</td>
                       <td className="py-4 px-4 text-gray-400">${trade.openPrice?.toFixed(5)}</td>
                       <td className={`py-4 px-4 font-medium ${calculateFloatingPnl(trade) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
                         {calculateFloatingPnl(trade) >= 0 ? '+' : ''}${calculateFloatingPnl(trade).toFixed(2)}
@@ -698,25 +700,25 @@ const AdminTradeManagement = () => {
             
             {/* Pagination */}
             {totalTrades > tradesPerPage && (
-              <div className="p-4 border-t border-gray-800 flex items-center justify-between">
-                <p className="text-gray-400 text-sm">
+              <div className={`p-4 border-t flex items-center justify-between ${isDarkMode ? 'border-gray-800' : 'border-gray-200'}`}>
+                <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                   Showing {((currentPage - 1) * tradesPerPage) + 1} - {Math.min(currentPage * tradesPerPage, totalTrades)} of {totalTrades} trades
                 </p>
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                     disabled={currentPage === 1}
-                    className="px-3 py-1 bg-dark-700 hover:bg-dark-600 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                    className={`px-3 py-1 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed ${isDarkMode ? 'bg-dark-700 hover:bg-dark-600 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-900'}`}
                   >
                     Previous
                   </button>
-                  <span className="text-white px-3">
+                  <span className={`px-3 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                     Page {currentPage} of {Math.ceil(totalTrades / tradesPerPage)}
                   </span>
                   <button
                     onClick={() => setCurrentPage(p => Math.min(Math.ceil(totalTrades / tradesPerPage), p + 1))}
                     disabled={currentPage >= Math.ceil(totalTrades / tradesPerPage)}
-                    className="px-3 py-1 bg-dark-700 hover:bg-dark-600 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                    className={`px-3 py-1 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed ${isDarkMode ? 'bg-dark-700 hover:bg-dark-600 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-900'}`}
                   >
                     Next
                   </button>
@@ -730,23 +732,23 @@ const AdminTradeManagement = () => {
       {/* Create Trade Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-dark-800 rounded-2xl w-full max-w-lg my-4 max-h-[90vh] flex flex-col">
-            <div className="p-4 sm:p-6 border-b border-gray-800 flex items-center justify-between shrink-0">
-              <h2 className="text-lg sm:text-xl font-bold text-white">Create Trade</h2>
+          <div className={`rounded-2xl w-full max-w-lg my-4 max-h-[90vh] flex flex-col ${isDarkMode ? 'bg-dark-800' : 'bg-white'}`}>
+            <div className={`p-4 sm:p-6 border-b flex items-center justify-between shrink-0 ${isDarkMode ? 'border-gray-800' : 'border-gray-200'}`}>
+              <h2 className={`text-lg sm:text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Create Trade</h2>
               <button onClick={() => setShowCreateModal(false)} className="text-gray-400 hover:text-white">
                 <X size={24} />
               </button>
             </div>
             <div className="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1">
               <div>
-                <label className="block text-gray-400 text-sm mb-1">User</label>
+                <label className={`block text-sm mb-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>User</label>
                 <select
                   value={createForm.userId}
                   onChange={(e) => {
                     setCreateForm({ ...createForm, userId: e.target.value, tradingAccountId: '' })
                     if (e.target.value) fetchTradingAccounts(e.target.value)
                   }}
-                  className="w-full px-3 py-2 bg-dark-700 border border-gray-700 rounded-lg text-white"
+                  className={`w-full px-3 py-2 border rounded-lg ${isDarkMode ? 'bg-dark-700 border-gray-700 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'}`}
                 >
                   <option value="">Select User</option>
                   {users.map(u => (
@@ -755,11 +757,11 @@ const AdminTradeManagement = () => {
                 </select>
               </div>
               <div>
-                <label className="block text-gray-400 text-sm mb-1">Trading Account</label>
+                <label className={`block text-sm mb-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Trading Account</label>
                 <select
                   value={createForm.tradingAccountId}
                   onChange={(e) => setCreateForm({ ...createForm, tradingAccountId: e.target.value })}
-                  className="w-full px-3 py-2 bg-dark-700 border border-gray-700 rounded-lg text-white"
+                  className={`w-full px-3 py-2 border rounded-lg ${isDarkMode ? 'bg-dark-700 border-gray-700 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'}`}
                 >
                   <option value="">Select Account</option>
                   {tradingAccounts.map(a => (
@@ -769,7 +771,7 @@ const AdminTradeManagement = () => {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-gray-400 text-sm mb-1">Symbol</label>
+                  <label className={`block text-sm mb-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Symbol</label>
                   <select
                     value={createForm.symbol}
                     onChange={(e) => {
@@ -777,7 +779,7 @@ const AdminTradeManagement = () => {
                       setCreateForm({ ...createForm, symbol })
                       fetchMarketPrice(symbol)
                     }}
-                    className="w-full px-3 py-2 bg-dark-700 border border-gray-700 rounded-lg text-white"
+                    className={`w-full px-3 py-2 border rounded-lg ${isDarkMode ? 'bg-dark-700 border-gray-700 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'}`}
                   >
                     <option value="XAUUSD">XAUUSD</option>
                     <option value="EURUSD">EURUSD</option>
@@ -787,7 +789,7 @@ const AdminTradeManagement = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-gray-400 text-sm mb-1">Order Type</label>
+                  <label className={`block text-sm mb-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Order Type</label>
                   <select
                     value={createForm.orderType}
                     onChange={(e) => {
@@ -797,7 +799,7 @@ const AdminTradeManagement = () => {
                         fetchMarketPrice(createForm.symbol)
                       }
                     }}
-                    className="w-full px-3 py-2 bg-dark-700 border border-gray-700 rounded-lg text-white"
+                    className={`w-full px-3 py-2 border rounded-lg ${isDarkMode ? 'bg-dark-700 border-gray-700 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'}`}
                   >
                     <option value="MARKET">Market Order</option>
                     <option value="LIMIT">Limit Order</option>
@@ -806,7 +808,7 @@ const AdminTradeManagement = () => {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-gray-400 text-sm mb-1">Side</label>
+                  <label className={`block text-sm mb-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Side</label>
                   <select
                     value={createForm.side}
                     onChange={(e) => {
@@ -823,20 +825,20 @@ const AdminTradeManagement = () => {
                         }
                       }
                     }}
-                    className="w-full px-3 py-2 bg-dark-700 border border-gray-700 rounded-lg text-white"
+                    className={`w-full px-3 py-2 border rounded-lg ${isDarkMode ? 'bg-dark-700 border-gray-700 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'}`}
                   >
                     <option value="BUY">BUY</option>
                     <option value="SELL">SELL</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-gray-400 text-sm mb-1">Quantity (Lots)</label>
+                  <label className={`block text-sm mb-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Quantity (Lots)</label>
                   <input
                     type="number"
                     step="0.01"
                     value={createForm.quantity}
                     onChange={(e) => setCreateForm({ ...createForm, quantity: e.target.value })}
-                    className="w-full px-3 py-2 bg-dark-700 border border-gray-700 rounded-lg text-white"
+                    className={`w-full px-3 py-2 border rounded-lg ${isDarkMode ? 'bg-dark-700 border-gray-700 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'}`}
                   />
                 </div>
               </div>
@@ -865,7 +867,7 @@ const AdminTradeManagement = () => {
               )}
 
               <div>
-                <label className="block text-gray-400 text-sm mb-1">
+                <label className={`block text-sm mb-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                   {createForm.orderType === 'MARKET' ? 'Execution Price (auto)' : 'Limit Price'}
                 </label>
                 <input
@@ -884,23 +886,23 @@ const AdminTradeManagement = () => {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-gray-400 text-sm mb-1">Stop Loss (optional)</label>
+                  <label className={`block text-sm mb-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Stop Loss (optional)</label>
                   <input
                     type="number"
                     step="0.00001"
                     value={createForm.stopLoss}
                     onChange={(e) => setCreateForm({ ...createForm, stopLoss: e.target.value })}
-                    className="w-full px-3 py-2 bg-dark-700 border border-gray-700 rounded-lg text-white"
+                    className={`w-full px-3 py-2 border rounded-lg ${isDarkMode ? 'bg-dark-700 border-gray-700 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'}`}
                   />
                 </div>
                 <div>
-                  <label className="block text-gray-400 text-sm mb-1">Take Profit (optional)</label>
+                  <label className={`block text-sm mb-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Take Profit (optional)</label>
                   <input
                     type="number"
                     step="0.00001"
                     value={createForm.takeProfit}
                     onChange={(e) => setCreateForm({ ...createForm, takeProfit: e.target.value })}
-                    className="w-full px-3 py-2 bg-dark-700 border border-gray-700 rounded-lg text-white"
+                    className={`w-full px-3 py-2 border rounded-lg ${isDarkMode ? 'bg-dark-700 border-gray-700 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'}`}
                   />
                 </div>
               </div>
@@ -952,47 +954,47 @@ const AdminTradeManagement = () => {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-gray-400 text-sm mb-1">Quantity (Lots)</label>
+                  <label className={`block text-sm mb-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Quantity (Lots)</label>
                   <input
                     type="number"
                     step="0.01"
                     value={editForm.quantity}
                     onChange={(e) => setEditForm({ ...editForm, quantity: e.target.value })}
-                    className="w-full px-3 py-2 bg-dark-700 border border-gray-700 rounded-lg text-white"
+                    className={`w-full px-3 py-2 border rounded-lg ${isDarkMode ? 'bg-dark-700 border-gray-700 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'}`}
                   />
                 </div>
                 <div>
-                  <label className="block text-gray-400 text-sm mb-1">Open Price</label>
+                  <label className={`block text-sm mb-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Open Price</label>
                   <input
                     type="number"
                     step="0.00001"
                     value={editForm.openPrice}
                     onChange={(e) => setEditForm({ ...editForm, openPrice: e.target.value })}
-                    className="w-full px-3 py-2 bg-dark-700 border border-gray-700 rounded-lg text-white"
+                    className={`w-full px-3 py-2 border rounded-lg ${isDarkMode ? 'bg-dark-700 border-gray-700 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'}`}
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-gray-400 text-sm mb-1">Stop Loss</label>
+                  <label className={`block text-sm mb-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Stop Loss</label>
                   <input
                     type="number"
                     step="0.00001"
                     value={editForm.stopLoss}
                     onChange={(e) => setEditForm({ ...editForm, stopLoss: e.target.value })}
-                    className="w-full px-3 py-2 bg-dark-700 border border-gray-700 rounded-lg text-white"
+                    className={`w-full px-3 py-2 border rounded-lg ${isDarkMode ? 'bg-dark-700 border-gray-700 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'}`}
                     placeholder="Optional"
                   />
                 </div>
                 <div>
-                  <label className="block text-gray-400 text-sm mb-1">Take Profit</label>
+                  <label className={`block text-sm mb-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Take Profit</label>
                   <input
                     type="number"
                     step="0.00001"
                     value={editForm.takeProfit}
                     onChange={(e) => setEditForm({ ...editForm, takeProfit: e.target.value })}
-                    className="w-full px-3 py-2 bg-dark-700 border border-gray-700 rounded-lg text-white"
+                    className={`w-full px-3 py-2 border rounded-lg ${isDarkMode ? 'bg-dark-700 border-gray-700 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'}`}
                     placeholder="Optional"
                   />
                 </div>
@@ -1003,18 +1005,18 @@ const AdminTradeManagement = () => {
                 <p className="text-gray-400 text-sm mb-3">Close Trade Settings (for closed trades or to set P&L)</p>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-gray-400 text-sm mb-1">Close Price</label>
+                    <label className={`block text-sm mb-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Close Price</label>
                     <input
                       type="number"
                       step="0.00001"
                       value={editForm.closePrice}
                       onChange={(e) => setEditForm({ ...editForm, closePrice: e.target.value })}
-                      className="w-full px-3 py-2 bg-dark-700 border border-gray-700 rounded-lg text-white"
+                      className={`w-full px-3 py-2 border rounded-lg ${isDarkMode ? 'bg-dark-700 border-gray-700 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'}`}
                       placeholder="Enter close price"
                     />
                   </div>
                   <div>
-                    <label className="block text-gray-400 text-sm mb-1">Realized P&L</label>
+                    <label className={`block text-sm mb-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Realized P&L</label>
                     <input
                       type="number"
                       step="0.01"

@@ -513,16 +513,16 @@ const OrderBook = () => {
                           return (
                             <tr key={trade._id} className="border-b border-gray-800 hover:bg-dark-700/50">
                               <td className="py-3 px-4 text-gray-400 text-sm">{trade.accountName}</td>
-                              <td className="py-3 px-4 text-white font-medium">{trade.symbol}</td>
+                              <td className={`py-3 px-4 font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{trade.symbol}</td>
                               <td className="py-3 px-4">
                                 <span className={`flex items-center gap-1 ${trade.side === 'BUY' ? 'text-green-500' : 'text-red-500'}`}>
                                   {trade.side === 'BUY' ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
                                   {trade.side}
                                 </span>
                               </td>
-                              <td className="py-3 px-4 text-white">{trade.quantity}</td>
+                              <td className={`py-3 px-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{trade.quantity}</td>
                               <td className="py-3 px-4 text-gray-400">{trade.openPrice?.toFixed(5)}</td>
-                              <td className="py-3 px-4 text-white">{currentPrice?.toFixed(5) || '-'}</td>
+                              <td className={`py-3 px-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{currentPrice?.toFixed(5) || '-'}</td>
                               <td className={`py-3 px-4 font-medium ${pnl >= 0 ? 'text-green-500' : 'text-red-500'}`}>
                                 {pnl >= 0 ? '+' : ''}${pnl.toFixed(2)}
                               </td>
@@ -600,14 +600,14 @@ const OrderBook = () => {
                               <tr key={trade._id} className="border-b border-gray-800 hover:bg-dark-700/50">
                                 <td className="py-3 px-4 text-gray-400 text-xs">{formatDate(trade.closedAt)}</td>
                                 <td className="py-3 px-4 text-gray-400 text-sm">{trade.accountName}</td>
-                                <td className="py-3 px-4 text-white font-medium">{trade.symbol}</td>
+                                <td className={`py-3 px-4 font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{trade.symbol}</td>
                                 <td className="py-3 px-4">
                                   <span className={`flex items-center gap-1 ${trade.side === 'BUY' ? 'text-green-500' : 'text-red-500'}`}>
                                     {trade.side === 'BUY' ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
                                     {trade.side}
                                   </span>
                                 </td>
-                                <td className="py-3 px-4 text-white">{trade.quantity}</td>
+                                <td className={`py-3 px-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{trade.quantity}</td>
                                 <td className="py-3 px-4 text-gray-400">{trade.openPrice?.toFixed(5)}</td>
                                 <td className="py-3 px-4 text-gray-400">{trade.closePrice?.toFixed(5)}</td>
                                 <td className={`py-3 px-4 font-medium ${(trade.realizedPnl || 0) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
@@ -672,7 +672,7 @@ const OrderBook = () => {
                         {pendingOrders.map((order) => (
                           <tr key={order._id} className="border-b border-gray-800 hover:bg-dark-700/50">
                             <td className="py-3 px-4 text-gray-400 text-sm">{order.accountName}</td>
-                            <td className="py-3 px-4 text-white font-medium">{order.symbol}</td>
+                            <td className={`py-3 px-4 font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{order.symbol}</td>
                             <td className="py-3 px-4 text-yellow-500 text-sm">{order.orderType}</td>
                             <td className="py-3 px-4">
                               <span className={`flex items-center gap-1 ${order.side === 'BUY' ? 'text-green-500' : 'text-red-500'}`}>
@@ -680,7 +680,7 @@ const OrderBook = () => {
                                 {order.side}
                               </span>
                             </td>
-                            <td className="py-3 px-4 text-white">{order.quantity}</td>
+                            <td className={`py-3 px-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{order.quantity}</td>
                             <td className="py-3 px-4 text-gray-400">{order.limitPrice?.toFixed(5) || order.stopPrice?.toFixed(5)}</td>
                             <td className="py-3 px-4">
                               <span className="px-2 py-1 bg-yellow-500/20 text-yellow-500 rounded text-xs">

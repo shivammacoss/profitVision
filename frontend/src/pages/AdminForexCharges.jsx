@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import AdminLayout from '../components/AdminLayout'
+import { useTheme } from '../context/ThemeContext'
 import { 
   DollarSign,
   Plus,
@@ -18,6 +19,7 @@ import {
 import { API_URL } from '../config/api'
 
 const AdminForexCharges = () => {
+  const { isDarkMode } = useTheme()
   const [charges, setCharges] = useState([])
   const [loading, setLoading] = useState(true)
   const [modalType, setModalType] = useState(null) // 'commission', 'spread', 'swap'
@@ -233,14 +235,14 @@ const AdminForexCharges = () => {
       <div className="space-y-6">
         
         {/* COMMISSION SECTION */}
-        <div className="bg-dark-800 rounded-xl border border-gray-800">
-          <div className="flex items-center justify-between p-4 border-b border-gray-700">
+        <div className={`rounded-xl border ${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'}`}>
+          <div className={`flex items-center justify-between p-4 border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gray-700 rounded-lg flex items-center justify-center">
-                <DollarSign size={20} className="text-white" />
+              <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${isDarkMode ? 'bg-gray-700' : 'bg-red-100'}`}>
+                <DollarSign size={20} className={isDarkMode ? 'text-white' : 'text-red-500'} />
               </div>
               <div>
-                <h2 className="text-white font-semibold">Commission</h2>
+                <h2 className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Commission</h2>
                 <p className="text-gray-500 text-sm">Trading fees per lot/trade</p>
               </div>
             </div>
@@ -260,13 +262,13 @@ const AdminForexCharges = () => {
             ) : (
               <div className="space-y-2">
                 {charges.filter(c => c.commissionValue > 0).map((charge) => (
-                  <div key={charge._id} className="flex items-center justify-between p-3 bg-dark-700 rounded-lg">
+                  <div key={charge._id} className={`flex items-center justify-between p-3 rounded-lg ${isDarkMode ? 'bg-dark-700' : 'bg-gray-50'}`}>
                     <div className="flex items-center gap-3">
-                      <span className="px-2 py-0.5 bg-gray-600 text-gray-300 text-xs rounded">{charge.level}</span>
-                      <span className="text-white">{getLevelLabel(charge)}</span>
+                      <span className={`px-2 py-0.5 text-xs rounded ${isDarkMode ? 'bg-gray-600 text-gray-300' : 'bg-blue-100 text-blue-700'}`}>{charge.level}</span>
+                      <span className={isDarkMode ? 'text-white' : 'text-gray-900'}>{getLevelLabel(charge)}</span>
                     </div>
                     <div className="flex items-center gap-4">
-                      <span className="text-white font-medium">${charge.commissionValue} <span className="text-gray-500 text-sm">({charge.commissionType})</span></span>
+                      <span className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>${charge.commissionValue} <span className="text-gray-500 text-sm">({charge.commissionType})</span></span>
                       <div className="flex items-center gap-1">
                         <button onClick={() => openEditModal(charge, 'commission')} className="p-1.5 hover:bg-dark-600 rounded text-gray-400 hover:text-white"><Edit size={14} /></button>
                         <button onClick={() => handleDelete(charge._id)} className="p-1.5 hover:bg-dark-600 rounded text-gray-400 hover:text-red-400"><Trash2 size={14} /></button>
@@ -280,14 +282,14 @@ const AdminForexCharges = () => {
         </div>
 
         {/* SPREAD SECTION */}
-        <div className="bg-dark-800 rounded-xl border border-gray-800">
-          <div className="flex items-center justify-between p-4 border-b border-gray-700">
+        <div className={`rounded-xl border ${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'}`}>
+          <div className={`flex items-center justify-between p-4 border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gray-700 rounded-lg flex items-center justify-center">
-                <TrendingUp size={20} className="text-white" />
+              <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${isDarkMode ? 'bg-gray-700' : 'bg-green-100'}`}>
+                <TrendingUp size={20} className={isDarkMode ? 'text-white' : 'text-green-500'} />
               </div>
               <div>
-                <h2 className="text-white font-semibold">Spread</h2>
+                <h2 className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Spread</h2>
                 <p className="text-gray-500 text-sm">Bid/Ask price difference</p>
               </div>
             </div>
@@ -307,13 +309,13 @@ const AdminForexCharges = () => {
             ) : (
               <div className="space-y-2">
                 {charges.filter(c => c.spreadValue > 0).map((charge) => (
-                  <div key={charge._id} className="flex items-center justify-between p-3 bg-dark-700 rounded-lg">
+                  <div key={charge._id} className={`flex items-center justify-between p-3 rounded-lg ${isDarkMode ? 'bg-dark-700' : 'bg-gray-50'}`}>
                     <div className="flex items-center gap-3">
-                      <span className="px-2 py-0.5 bg-gray-600 text-gray-300 text-xs rounded">{charge.level}</span>
-                      <span className="text-white">{getLevelLabel(charge)}</span>
+                      <span className={`px-2 py-0.5 text-xs rounded ${isDarkMode ? 'bg-gray-600 text-gray-300' : 'bg-blue-100 text-blue-700'}`}>{charge.level}</span>
+                      <span className={isDarkMode ? 'text-white' : 'text-gray-900'}>{getLevelLabel(charge)}</span>
                     </div>
                     <div className="flex items-center gap-4">
-                      <span className="text-white font-medium">{charge.spreadValue} <span className="text-gray-500 text-sm">({charge.spreadType})</span></span>
+                      <span className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{charge.spreadValue} <span className="text-gray-500 text-sm">({charge.spreadType})</span></span>
                       <div className="flex items-center gap-1">
                         <button onClick={() => openEditModal(charge, 'spread')} className="p-1.5 hover:bg-dark-600 rounded text-gray-400 hover:text-white"><Edit size={14} /></button>
                         <button onClick={() => handleDelete(charge._id)} className="p-1.5 hover:bg-dark-600 rounded text-gray-400 hover:text-red-400"><Trash2 size={14} /></button>
@@ -327,14 +329,14 @@ const AdminForexCharges = () => {
         </div>
 
         {/* SWAP SECTION */}
-        <div className="bg-dark-800 rounded-xl border border-gray-800">
-          <div className="flex items-center justify-between p-4 border-b border-gray-700">
+        <div className={`rounded-xl border ${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'}`}>
+          <div className={`flex items-center justify-between p-4 border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gray-700 rounded-lg flex items-center justify-center">
-                <Moon size={20} className="text-white" />
+              <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${isDarkMode ? 'bg-gray-700' : 'bg-purple-100'}`}>
+                <Moon size={20} className={isDarkMode ? 'text-white' : 'text-purple-500'} />
               </div>
               <div>
-                <h2 className="text-white font-semibold">Swap</h2>
+                <h2 className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Swap</h2>
                 <p className="text-gray-500 text-sm">Overnight holding fees</p>
               </div>
             </div>
@@ -354,13 +356,13 @@ const AdminForexCharges = () => {
             ) : (
               <div className="space-y-2">
                 {charges.filter(c => c.swapLong !== 0 || c.swapShort !== 0).map((charge) => (
-                  <div key={charge._id} className="flex items-center justify-between p-3 bg-dark-700 rounded-lg">
+                  <div key={charge._id} className={`flex items-center justify-between p-3 rounded-lg ${isDarkMode ? 'bg-dark-700' : 'bg-gray-50'}`}>
                     <div className="flex items-center gap-3">
-                      <span className="px-2 py-0.5 bg-gray-600 text-gray-300 text-xs rounded">{charge.level}</span>
-                      <span className="text-white">{getLevelLabel(charge)}</span>
+                      <span className={`px-2 py-0.5 text-xs rounded ${isDarkMode ? 'bg-gray-600 text-gray-300' : 'bg-blue-100 text-blue-700'}`}>{charge.level}</span>
+                      <span className={isDarkMode ? 'text-white' : 'text-gray-900'}>{getLevelLabel(charge)}</span>
                     </div>
                     <div className="flex items-center gap-4">
-                      <span className="text-white font-medium">Long: {charge.swapLong} | Short: {charge.swapShort}</span>
+                      <span className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Long: {charge.swapLong} | Short: {charge.swapShort}</span>
                       <div className="flex items-center gap-1">
                         <button onClick={() => openEditModal(charge, 'swap')} className="p-1.5 hover:bg-dark-600 rounded text-gray-400 hover:text-white"><Edit size={14} /></button>
                         <button onClick={() => handleDelete(charge._id)} className="p-1.5 hover:bg-dark-600 rounded text-gray-400 hover:text-red-400"><Trash2 size={14} /></button>
@@ -377,16 +379,16 @@ const AdminForexCharges = () => {
       {/* COMMISSION MODAL - Cascading Hierarchy */}
       {modalType === 'commission' && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className="bg-dark-800 rounded-xl w-full max-w-lg border border-gray-700 max-h-[90vh] overflow-y-auto">
-            <div className="p-4 border-b border-gray-700 flex items-center justify-between sticky top-0 bg-dark-800">
-              <h2 className="text-lg font-semibold text-white">{editingCharge ? 'Edit Commission' : 'Add Commission'}</h2>
+          <div className={`rounded-xl w-full max-w-lg border max-h-[90vh] overflow-y-auto ${isDarkMode ? 'bg-dark-800 border-gray-700' : 'bg-white border-gray-200 shadow-xl'}`}>
+            <div className={`p-4 border-b flex items-center justify-between sticky top-0 ${isDarkMode ? 'border-gray-700 bg-dark-800' : 'border-gray-200 bg-white'}`}>
+              <h2 className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{editingCharge ? 'Edit Commission' : 'Add Commission'}</h2>
               <button onClick={() => setModalType(null)} className="text-gray-400 hover:text-white"><X size={20} /></button>
             </div>
             <div className="p-4 space-y-4">
               {/* Step 1: Account Type */}
               <div>
                 <label className="block text-gray-400 text-xs mb-1">1. Account Type <span className="text-gray-600">(optional)</span></label>
-                <select value={form.accountTypeId} onChange={(e) => setForm({ ...form, accountTypeId: e.target.value, level: e.target.value ? 'ACCOUNT_TYPE' : 'GLOBAL' })} className="w-full px-3 py-2 bg-dark-700 border border-gray-600 rounded-lg text-white text-sm">
+                <select value={form.accountTypeId} onChange={(e) => setForm({ ...form, accountTypeId: e.target.value, level: e.target.value ? 'ACCOUNT_TYPE' : 'GLOBAL' })} className={`w-full px-3 py-2 border rounded-lg text-sm ${isDarkMode ? 'bg-dark-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'}`}>
                   <option value="">All Account Types (Global)</option>
                   {accountTypes.map(acc => <option key={acc._id} value={acc._id}>{acc.name}</option>)}
                 </select>
@@ -395,7 +397,7 @@ const AdminForexCharges = () => {
               {/* Step 2: Segment */}
               <div>
                 <label className="block text-gray-400 text-xs mb-1">2. Segment <span className="text-gray-600">(optional)</span></label>
-                <select value={form.segment} onChange={(e) => setForm({ ...form, segment: e.target.value, level: e.target.value ? 'SEGMENT' : form.level })} className="w-full px-3 py-2 bg-dark-700 border border-gray-600 rounded-lg text-white text-sm">
+                <select value={form.segment} onChange={(e) => setForm({ ...form, segment: e.target.value, level: e.target.value ? 'SEGMENT' : form.level })} className={`w-full px-3 py-2 border rounded-lg text-sm ${isDarkMode ? 'bg-dark-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'}`}>
                   <option value="">All Segments</option>
                   <option value="Forex">Forex</option>
                   <option value="Metals">Metals</option>
@@ -407,7 +409,7 @@ const AdminForexCharges = () => {
               {/* Step 3: Instrument - Filtered by Segment */}
               <div>
                 <label className="block text-gray-400 text-xs mb-1">3. Instrument <span className="text-gray-600">(optional{form.segment ? ` - showing ${form.segment} only` : ''})</span></label>
-                <select value={form.instrumentSymbol} onChange={(e) => setForm({ ...form, instrumentSymbol: e.target.value, level: e.target.value ? 'INSTRUMENT' : form.level })} className="w-full px-3 py-2 bg-dark-700 border border-gray-600 rounded-lg text-white text-sm">
+                <select value={form.instrumentSymbol} onChange={(e) => setForm({ ...form, instrumentSymbol: e.target.value, level: e.target.value ? 'INSTRUMENT' : form.level })} className={`w-full px-3 py-2 border rounded-lg text-sm ${isDarkMode ? 'bg-dark-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'}`}>
                   <option value="">All Instruments</option>
                   {(!form.segment || form.segment === 'Forex') && (
                     <optgroup label="Forex">
@@ -464,7 +466,7 @@ const AdminForexCharges = () => {
                 ) : (
                   <div className="relative">
                     <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
-                    <input type="text" placeholder="Search user to override..." value={userSearch} onChange={(e) => { setUserSearch(e.target.value); setShowUserDropdown(true) }} onFocus={() => setShowUserDropdown(true)} className="w-full pl-9 pr-3 py-2 bg-dark-700 border border-gray-600 rounded-lg text-white text-sm" />
+                    <input type="text" placeholder="Search user to override..." value={userSearch} onChange={(e) => { setUserSearch(e.target.value); setShowUserDropdown(true) }} onFocus={() => setShowUserDropdown(true)} className={`w-full pl-9 pr-3 py-2 border rounded-lg text-sm ${isDarkMode ? 'bg-dark-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'}`} />
                     {showUserDropdown && userSearch && (
                       <div className="absolute z-10 w-full mt-1 bg-dark-700 border border-gray-600 rounded-lg max-h-40 overflow-y-auto">
                         {filteredUsers.length === 0 ? (
@@ -505,7 +507,7 @@ const AdminForexCharges = () => {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-gray-400 text-xs mb-1">Commission Type</label>
-                  <select value={form.commissionType} onChange={(e) => setForm({ ...form, commissionType: e.target.value })} className="w-full px-3 py-2 bg-dark-700 border border-gray-600 rounded-lg text-white text-sm">
+                  <select value={form.commissionType} onChange={(e) => setForm({ ...form, commissionType: e.target.value })} className={`w-full px-3 py-2 border rounded-lg text-sm ${isDarkMode ? 'bg-dark-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'}`}>
                     <option value="PER_LOT">Per Lot ($)</option>
                     <option value="PER_TRADE">Per Trade ($)</option>
                     <option value="PERCENTAGE">Percentage (%)</option>
@@ -513,7 +515,7 @@ const AdminForexCharges = () => {
                 </div>
                 <div>
                   <label className="block text-gray-400 text-xs mb-1">Value</label>
-                  <input type="number" step="0.01" value={form.commissionValue} onChange={handleNumberChange('commissionValue')} onFocus={handleInputFocus} className="w-full px-3 py-2 bg-dark-700 border border-gray-600 rounded-lg text-white text-sm" placeholder="0" />
+                  <input type="number" step="0.01" value={form.commissionValue} onChange={handleNumberChange('commissionValue')} onFocus={handleInputFocus} className={`w-full px-3 py-2 border rounded-lg text-sm ${isDarkMode ? 'bg-dark-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'}`} placeholder="0" />
                 </div>
               </div>
               
@@ -537,7 +539,7 @@ const AdminForexCharges = () => {
               </div>
               
               <div className="flex gap-3 pt-2">
-                <button onClick={() => setModalType(null)} className="flex-1 py-2 bg-dark-700 hover:bg-dark-600 text-white rounded-lg text-sm">Cancel</button>
+                <button onClick={() => setModalType(null)} className={`flex-1 py-2 rounded-lg text-sm ${isDarkMode ? 'bg-dark-700 hover:bg-dark-600 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'}`}>Cancel</button>
                 <button onClick={handleSave} className="flex-1 py-2 bg-red-500 text-white hover:bg-red-600 rounded-lg text-sm font-medium">Save</button>
               </div>
             </div>
@@ -548,16 +550,16 @@ const AdminForexCharges = () => {
       {/* SPREAD MODAL - Account Type first, then Instrument selection */}
       {modalType === 'spread' && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className="bg-dark-800 rounded-xl w-full max-w-lg border border-gray-700 max-h-[90vh] overflow-y-auto">
-            <div className="p-4 border-b border-gray-700 flex items-center justify-between sticky top-0 bg-dark-800">
-              <h2 className="text-lg font-semibold text-white">{editingCharge ? 'Edit Spread' : 'Add Spread'}</h2>
+          <div className={`rounded-xl w-full max-w-lg border max-h-[90vh] overflow-y-auto ${isDarkMode ? 'bg-dark-800 border-gray-700' : 'bg-white border-gray-200 shadow-xl'}`}>
+            <div className={`p-4 border-b flex items-center justify-between sticky top-0 ${isDarkMode ? 'border-gray-700 bg-dark-800' : 'border-gray-200 bg-white'}`}>
+              <h2 className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{editingCharge ? 'Edit Spread' : 'Add Spread'}</h2>
               <button onClick={() => setModalType(null)} className="text-gray-400 hover:text-white"><X size={20} /></button>
             </div>
             <div className="p-4 space-y-4">
               {/* Step 1: Account Type */}
               <div>
                 <label className="block text-gray-400 text-xs mb-1">1. Account Type <span className="text-gray-600">(optional)</span></label>
-                <select value={form.accountTypeId} onChange={(e) => setForm({ ...form, accountTypeId: e.target.value, level: e.target.value ? 'ACCOUNT_TYPE' : 'GLOBAL' })} className="w-full px-3 py-2 bg-dark-700 border border-gray-600 rounded-lg text-white text-sm">
+                <select value={form.accountTypeId} onChange={(e) => setForm({ ...form, accountTypeId: e.target.value, level: e.target.value ? 'ACCOUNT_TYPE' : 'GLOBAL' })} className={`w-full px-3 py-2 border rounded-lg text-sm ${isDarkMode ? 'bg-dark-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'}`}>
                   <option value="">All Account Types (Global)</option>
                   {accountTypes.map(acc => <option key={acc._id} value={acc._id}>{acc.name}</option>)}
                 </select>
@@ -566,7 +568,7 @@ const AdminForexCharges = () => {
               {/* Step 2: Segment Filter */}
               <div>
                 <label className="block text-gray-400 text-xs mb-1">2. Segment <span className="text-gray-600">(filter instruments)</span></label>
-                <select value={form.segment} onChange={(e) => setForm({ ...form, segment: e.target.value, instrumentSymbol: '' })} className="w-full px-3 py-2 bg-dark-700 border border-gray-600 rounded-lg text-white text-sm">
+                <select value={form.segment} onChange={(e) => setForm({ ...form, segment: e.target.value, instrumentSymbol: '' })} className={`w-full px-3 py-2 border rounded-lg text-sm ${isDarkMode ? 'bg-dark-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'}`}>
                   <option value="">All Segments</option>
                   <option value="Forex">Forex</option>
                   <option value="Metals">Metals</option>
@@ -578,7 +580,7 @@ const AdminForexCharges = () => {
               {/* Step 3: Instrument - Filtered by Segment */}
               <div>
                 <label className="block text-gray-400 text-xs mb-1">3. Instrument <span className="text-gray-600">(optional{form.segment ? ` - showing ${form.segment} only` : ''})</span></label>
-                <select value={form.instrumentSymbol} onChange={(e) => setForm({ ...form, instrumentSymbol: e.target.value, level: e.target.value ? 'INSTRUMENT' : form.level })} className="w-full px-3 py-2 bg-dark-700 border border-gray-600 rounded-lg text-white text-sm">
+                <select value={form.instrumentSymbol} onChange={(e) => setForm({ ...form, instrumentSymbol: e.target.value, level: e.target.value ? 'INSTRUMENT' : form.level })} className={`w-full px-3 py-2 border rounded-lg text-sm ${isDarkMode ? 'bg-dark-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'}`}>
                   <option value="">All Instruments</option>
                   {(!form.segment || form.segment === 'Forex') && (
                     <optgroup label="Forex">
@@ -635,7 +637,7 @@ const AdminForexCharges = () => {
                 ) : (
                   <div className="relative">
                     <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
-                    <input type="text" placeholder="Search user for custom spread..." value={userSearch} onChange={(e) => { setUserSearch(e.target.value); setShowUserDropdown(true) }} onFocus={() => setShowUserDropdown(true)} className="w-full pl-9 pr-3 py-2 bg-dark-700 border border-gray-600 rounded-lg text-white text-sm" />
+                    <input type="text" placeholder="Search user for custom spread..." value={userSearch} onChange={(e) => { setUserSearch(e.target.value); setShowUserDropdown(true) }} onFocus={() => setShowUserDropdown(true)} className={`w-full pl-9 pr-3 py-2 border rounded-lg text-sm ${isDarkMode ? 'bg-dark-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'}`} />
                     {showUserDropdown && userSearch && (
                       <div className="absolute z-10 w-full mt-1 bg-dark-700 border border-gray-600 rounded-lg max-h-40 overflow-y-auto">
                         {filteredUsers.length === 0 ? (
@@ -674,21 +676,21 @@ const AdminForexCharges = () => {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-gray-400 text-xs mb-1">Spread Type</label>
-                  <select value={form.spreadType} onChange={(e) => setForm({ ...form, spreadType: e.target.value })} className="w-full px-3 py-2 bg-dark-700 border border-gray-600 rounded-lg text-white text-sm">
+                  <select value={form.spreadType} onChange={(e) => setForm({ ...form, spreadType: e.target.value })} className={`w-full px-3 py-2 border rounded-lg text-sm ${isDarkMode ? 'bg-dark-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'}`}>
                     <option value="FIXED">Fixed (Pips/Cents)</option>
                     <option value="PERCENTAGE">Percentage (%)</option>
                   </select>
                 </div>
                 <div>
                   <label className="block text-gray-400 text-xs mb-1">Spread Value</label>
-                  <input type="number" step="0.01" value={form.spreadValue} onChange={handleNumberChange('spreadValue')} onFocus={handleInputFocus} className="w-full px-3 py-2 bg-dark-700 border border-gray-600 rounded-lg text-white text-sm" placeholder="0" />
+                  <input type="number" step="0.01" value={form.spreadValue} onChange={handleNumberChange('spreadValue')} onFocus={handleInputFocus} className={`w-full px-3 py-2 border rounded-lg text-sm ${isDarkMode ? 'bg-dark-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'}`} placeholder="0" />
                 </div>
               </div>
               
               <p className="text-gray-500 text-xs">Forex: pips (e.g., 1.5) | Gold: cents (e.g., 50) | Crypto: USD (e.g., 10)</p>
               
               <div className="flex gap-3 pt-2">
-                <button onClick={() => setModalType(null)} className="flex-1 py-2 bg-dark-700 hover:bg-dark-600 text-white rounded-lg text-sm">Cancel</button>
+                <button onClick={() => setModalType(null)} className={`flex-1 py-2 rounded-lg text-sm ${isDarkMode ? 'bg-dark-700 hover:bg-dark-600 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'}`}>Cancel</button>
                 <button onClick={handleSave} className="flex-1 py-2 bg-red-500 text-white hover:bg-red-600 rounded-lg text-sm font-medium">Save</button>
               </div>
             </div>
@@ -699,16 +701,16 @@ const AdminForexCharges = () => {
       {/* SWAP MODAL - Cascading Hierarchy */}
       {modalType === 'swap' && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className="bg-dark-800 rounded-xl w-full max-w-lg border border-gray-700 max-h-[90vh] overflow-y-auto">
-            <div className="p-4 border-b border-gray-700 flex items-center justify-between sticky top-0 bg-dark-800">
-              <h2 className="text-lg font-semibold text-white">{editingCharge ? 'Edit Swap' : 'Add Swap'}</h2>
+          <div className={`rounded-xl w-full max-w-lg border max-h-[90vh] overflow-y-auto ${isDarkMode ? 'bg-dark-800 border-gray-700' : 'bg-white border-gray-200 shadow-xl'}`}>
+            <div className={`p-4 border-b flex items-center justify-between sticky top-0 ${isDarkMode ? 'border-gray-700 bg-dark-800' : 'border-gray-200 bg-white'}`}>
+              <h2 className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{editingCharge ? 'Edit Swap' : 'Add Swap'}</h2>
               <button onClick={() => setModalType(null)} className="text-gray-400 hover:text-white"><X size={20} /></button>
             </div>
             <div className="p-4 space-y-4">
               {/* Step 1: Account Type */}
               <div>
                 <label className="block text-gray-400 text-xs mb-1">1. Account Type <span className="text-gray-600">(optional)</span></label>
-                <select value={form.accountTypeId} onChange={(e) => setForm({ ...form, accountTypeId: e.target.value, level: e.target.value ? 'ACCOUNT_TYPE' : 'GLOBAL' })} className="w-full px-3 py-2 bg-dark-700 border border-gray-600 rounded-lg text-white text-sm">
+                <select value={form.accountTypeId} onChange={(e) => setForm({ ...form, accountTypeId: e.target.value, level: e.target.value ? 'ACCOUNT_TYPE' : 'GLOBAL' })} className={`w-full px-3 py-2 border rounded-lg text-sm ${isDarkMode ? 'bg-dark-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'}`}>
                   <option value="">All Account Types (Global)</option>
                   {accountTypes.map(acc => <option key={acc._id} value={acc._id}>{acc.name}</option>)}
                 </select>
@@ -717,7 +719,7 @@ const AdminForexCharges = () => {
               {/* Step 2: Segment Filter */}
               <div>
                 <label className="block text-gray-400 text-xs mb-1">2. Segment <span className="text-gray-600">(filter instruments)</span></label>
-                <select value={form.segment} onChange={(e) => setForm({ ...form, segment: e.target.value, instrumentSymbol: '' })} className="w-full px-3 py-2 bg-dark-700 border border-gray-600 rounded-lg text-white text-sm">
+                <select value={form.segment} onChange={(e) => setForm({ ...form, segment: e.target.value, instrumentSymbol: '' })} className={`w-full px-3 py-2 border rounded-lg text-sm ${isDarkMode ? 'bg-dark-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'}`}>
                   <option value="">All Segments</option>
                   <option value="Forex">Forex</option>
                   <option value="Metals">Metals</option>
@@ -729,7 +731,7 @@ const AdminForexCharges = () => {
               {/* Step 3: Instrument - Filtered by Segment */}
               <div>
                 <label className="block text-gray-400 text-xs mb-1">3. Instrument <span className="text-gray-600">(optional{form.segment ? ` - showing ${form.segment} only` : ''})</span></label>
-                <select value={form.instrumentSymbol} onChange={(e) => setForm({ ...form, instrumentSymbol: e.target.value, level: e.target.value ? 'INSTRUMENT' : form.level })} className="w-full px-3 py-2 bg-dark-700 border border-gray-600 rounded-lg text-white text-sm">
+                <select value={form.instrumentSymbol} onChange={(e) => setForm({ ...form, instrumentSymbol: e.target.value, level: e.target.value ? 'INSTRUMENT' : form.level })} className={`w-full px-3 py-2 border rounded-lg text-sm ${isDarkMode ? 'bg-dark-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'}`}>
                   <option value="">All Instruments</option>
                   {(!form.segment || form.segment === 'Forex') && (
                     <optgroup label="Forex">
@@ -786,7 +788,7 @@ const AdminForexCharges = () => {
                 ) : (
                   <div className="relative">
                     <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
-                    <input type="text" placeholder="Search user for custom swap..." value={userSearch} onChange={(e) => { setUserSearch(e.target.value); setShowUserDropdown(true) }} onFocus={() => setShowUserDropdown(true)} className="w-full pl-9 pr-3 py-2 bg-dark-700 border border-gray-600 rounded-lg text-white text-sm" />
+                    <input type="text" placeholder="Search user for custom swap..." value={userSearch} onChange={(e) => { setUserSearch(e.target.value); setShowUserDropdown(true) }} onFocus={() => setShowUserDropdown(true)} className={`w-full pl-9 pr-3 py-2 border rounded-lg text-sm ${isDarkMode ? 'bg-dark-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'}`} />
                     {showUserDropdown && userSearch && (
                       <div className="absolute z-10 w-full mt-1 bg-dark-700 border border-gray-600 rounded-lg max-h-40 overflow-y-auto">
                         {filteredUsers.length === 0 ? (
@@ -825,18 +827,18 @@ const AdminForexCharges = () => {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-gray-400 text-xs mb-1">Swap Long (points)</label>
-                  <input type="number" step="0.01" value={form.swapLong} onChange={handleNumberChange('swapLong')} onFocus={handleInputFocus} className="w-full px-3 py-2 bg-dark-700 border border-gray-600 rounded-lg text-white text-sm" placeholder="0" />
+                  <input type="number" step="0.01" value={form.swapLong} onChange={handleNumberChange('swapLong')} onFocus={handleInputFocus} className={`w-full px-3 py-2 border rounded-lg text-sm ${isDarkMode ? 'bg-dark-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'}`} placeholder="0" />
                 </div>
                 <div>
                   <label className="block text-gray-400 text-xs mb-1">Swap Short (points)</label>
-                  <input type="number" step="0.01" value={form.swapShort} onChange={handleNumberChange('swapShort')} onFocus={handleInputFocus} className="w-full px-3 py-2 bg-dark-700 border border-gray-600 rounded-lg text-white text-sm" placeholder="0" />
+                  <input type="number" step="0.01" value={form.swapShort} onChange={handleNumberChange('swapShort')} onFocus={handleInputFocus} className={`w-full px-3 py-2 border rounded-lg text-sm ${isDarkMode ? 'bg-dark-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'}`} placeholder="0" />
                 </div>
               </div>
               
               <p className="text-gray-500 text-xs">Overnight fees charged for holding positions (negative = charge, positive = credit)</p>
               
               <div className="flex gap-3 pt-2">
-                <button onClick={() => setModalType(null)} className="flex-1 py-2 bg-dark-700 hover:bg-dark-600 text-white rounded-lg text-sm">Cancel</button>
+                <button onClick={() => setModalType(null)} className={`flex-1 py-2 rounded-lg text-sm ${isDarkMode ? 'bg-dark-700 hover:bg-dark-600 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'}`}>Cancel</button>
                 <button onClick={handleSave} className="flex-1 py-2 bg-red-500 text-white hover:bg-red-600 rounded-lg text-sm font-medium">Save</button>
               </div>
             </div>

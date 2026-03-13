@@ -279,7 +279,7 @@ const AdminFundManagement = () => {
                       </div>
                       <div>
                         <p className={`${isDarkMode ? 'text-white' : 'text-gray-900'} font-medium`}>{txn.userId?.firstName || txn.userId?.email}</p>
-                        <p className="text-gray-500 text-xs">{txn.transactionId}</p>
+                        <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>{txn.transactionId || txn._id?.slice(-8) || '-'}</p>
                       </div>
                     </div>
                     <span className={`px-2 py-1 rounded-full text-xs ${getStatusColor(txn.status)}`}>
@@ -330,7 +330,7 @@ const AdminFundManagement = () => {
                 <tbody>
                   {filteredTransactions.map((txn) => (
                     <tr key={txn._id} className={`border-b ${isDarkMode ? 'border-gray-700 hover:bg-dark-700' : 'border-gray-100 hover:bg-gray-50'}`}>
-                      <td className={`py-4 px-4 ${isDarkMode ? 'text-white' : 'text-gray-900'} font-mono text-sm`}>{txn.transactionId}</td>
+                      <td className={`py-4 px-4 ${isDarkMode ? 'text-white' : 'text-gray-900'} font-mono text-sm`}>{txn.transactionId || txn._id?.slice(-8) || '-'}</td>
                       <td className={`py-4 px-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{txn.userId?.firstName || txn.userId?.email}</td>
                       <td className="py-4 px-4">
                         <span className={`flex items-center gap-1 ${txn.type?.toUpperCase() === 'DEPOSIT' ? 'text-green-500' : 'text-red-500'}`}>

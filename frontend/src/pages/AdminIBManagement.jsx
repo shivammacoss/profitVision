@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import AdminLayout from '../components/AdminLayout'
+import { useTheme } from '../context/ThemeContext'
 import { 
   UserCog,
   Plus,
@@ -24,6 +25,7 @@ import {
 import { API_URL } from '../config/api'
 
 const AdminIBManagement = () => {
+  const { isDarkMode } = useTheme()
   const [searchTerm, setSearchTerm] = useState('')
   const [activeTab, setActiveTab] = useState('ibs')
   const [ibs, setIbs] = useState([])
@@ -548,34 +550,34 @@ const AdminIBManagement = () => {
     <AdminLayout title="IB Management" subtitle="Manage Introducing Brokers and Referral Plans">
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <div className="bg-dark-800 rounded-xl p-5 border border-gray-800">
+        <div className={`rounded-xl p-5 border ${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'}`}>
           <div className="flex items-center gap-2 mb-2">
             <UserCog size={18} className="text-blue-500" />
-            <p className="text-gray-500 text-sm">Total IBs</p>
+            <p className={`text-sm ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>Total IBs</p>
           </div>
-          <p className="text-white text-2xl font-bold">{dashboard?.ibs?.total || 0}</p>
+          <p className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{dashboard?.ibs?.total || 0}</p>
           <p className="text-yellow-500 text-xs mt-1">{dashboard?.ibs?.pending || 0} pending</p>
         </div>
-        <div className="bg-dark-800 rounded-xl p-5 border border-gray-800">
+        <div className={`rounded-xl p-5 border ${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'}`}>
           <div className="flex items-center gap-2 mb-2">
             <Users size={18} className="text-green-500" />
-            <p className="text-gray-500 text-sm">Total Referrals</p>
+            <p className={`text-sm ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>Total Referrals</p>
           </div>
-          <p className="text-white text-2xl font-bold">{dashboard?.referrals?.total || 0}</p>
+          <p className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{dashboard?.referrals?.total || 0}</p>
         </div>
-        <div className="bg-dark-800 rounded-xl p-5 border border-gray-800">
+        <div className={`rounded-xl p-5 border ${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'}`}>
           <div className="flex items-center gap-2 mb-2">
             <DollarSign size={18} className="text-purple-500" />
-            <p className="text-gray-500 text-sm">Total Commissions</p>
+            <p className={`text-sm ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>Total Commissions</p>
           </div>
-          <p className="text-white text-2xl font-bold">${(dashboard?.commissions?.total?.totalCommission || 0).toFixed(2)}</p>
+          <p className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>${(dashboard?.commissions?.total?.totalCommission || 0).toFixed(2)}</p>
         </div>
-        <div className="bg-dark-800 rounded-xl p-5 border border-gray-800">
+        <div className={`rounded-xl p-5 border ${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'}`}>
           <div className="flex items-center gap-2 mb-2">
             <TrendingUp size={18} className="text-orange-500" />
-            <p className="text-gray-500 text-sm">Active IBs</p>
+            <p className={`text-sm ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>Active IBs</p>
           </div>
-          <p className="text-white text-2xl font-bold">{dashboard?.ibs?.active || 0}</p>
+          <p className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{dashboard?.ibs?.active || 0}</p>
         </div>
       </div>
 
@@ -609,7 +611,7 @@ const AdminIBManagement = () => {
             className={`px-4 py-2 rounded-lg whitespace-nowrap flex items-center gap-2 ${
               activeTab === tab.id 
                 ? 'bg-accent-green text-black' 
-                : 'bg-dark-800 text-gray-400 hover:text-white'
+                : isDarkMode ? 'bg-dark-800 text-gray-400 hover:text-white' : 'bg-gray-100 text-gray-600 hover:text-gray-900'
             }`}
           >
             {tab.icon && <tab.icon size={16} />}
@@ -627,9 +629,9 @@ const AdminIBManagement = () => {
 
       {/* Active IBs Tab */}
       {activeTab === 'ibs' && (
-        <div className="bg-dark-800 rounded-xl border border-gray-800 overflow-hidden">
-          <div className="p-4 border-b border-gray-800 flex items-center justify-between">
-            <h2 className="text-white font-semibold">Active IBs</h2>
+        <div className={`rounded-xl border overflow-hidden ${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'}`}>
+          <div className={`p-4 border-b flex items-center justify-between ${isDarkMode ? 'border-gray-800' : 'border-gray-200'}`}>
+            <h2 className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Active IBs</h2>
             <div className="relative">
               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
               <input
@@ -721,9 +723,9 @@ const AdminIBManagement = () => {
 
       {/* Applications Tab */}
       {activeTab === 'applications' && (
-        <div className="bg-dark-800 rounded-xl border border-gray-800 overflow-hidden">
-          <div className="p-4 border-b border-gray-800">
-            <h2 className="text-white font-semibold">Pending Applications</h2>
+        <div className={`rounded-xl border overflow-hidden ${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'}`}>
+          <div className={`p-4 border-b ${isDarkMode ? 'border-gray-800' : 'border-gray-200'}`}>
+            <h2 className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Pending Applications</h2>
           </div>
 
           {applications.length === 0 ? (
@@ -764,9 +766,9 @@ const AdminIBManagement = () => {
 
       {/* Withdrawal Requests Tab */}
       {activeTab === 'withdrawals' && (
-        <div className="bg-dark-800 rounded-xl border border-gray-800 overflow-hidden">
-          <div className="p-4 border-b border-gray-800 flex items-center justify-between">
-            <h2 className="text-white font-semibold">Pending Withdrawal Requests</h2>
+        <div className={`rounded-xl border overflow-hidden ${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'}`}>
+          <div className={`p-4 border-b flex items-center justify-between ${isDarkMode ? 'border-gray-800' : 'border-gray-200'}`}>
+            <h2 className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Pending Withdrawal Requests</h2>
             <button
               onClick={fetchPendingWithdrawals}
               className="flex items-center gap-2 px-3 py-1.5 bg-dark-700 text-gray-400 rounded-lg hover:text-white text-sm"

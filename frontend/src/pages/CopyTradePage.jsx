@@ -944,6 +944,8 @@ const CopyTradePage = () => {
                         <th className={`text-left text-xs font-medium px-4 py-3 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Side</th>
                         <th className={`text-left text-xs font-medium px-4 py-3 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Lots</th>
                         <th className={`text-left text-xs font-medium px-4 py-3 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Open Price</th>
+                        <th className={`text-left text-xs font-medium px-4 py-3 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>SL</th>
+                        <th className={`text-left text-xs font-medium px-4 py-3 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>TP</th>
                         <th className={`text-left text-xs font-medium px-4 py-3 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Close Price</th>
                         <th className={`text-left text-xs font-medium px-4 py-3 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Total P/L</th>
                         <th className={`text-left text-xs font-medium px-4 py-3 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Master Share</th>
@@ -959,6 +961,12 @@ const CopyTradePage = () => {
                           <td className={`px-4 py-3 text-sm ${trade.side === 'BUY' ? 'text-green-500' : 'text-red-500'}`}>{trade.side}</td>
                           <td className={`px-4 py-3 text-sm ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{trade.followerLotSize}</td>
                           <td className={`px-4 py-3 text-sm ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{trade.followerOpenPrice?.toFixed(5)}</td>
+                          <td className={`px-4 py-3 text-sm ${trade.masterStopLoss ? 'text-red-400' : 'text-gray-500'}`}>
+                            {trade.masterStopLoss?.toFixed(5) || '-'}
+                          </td>
+                          <td className={`px-4 py-3 text-sm ${trade.masterTakeProfit ? 'text-green-400' : 'text-gray-500'}`}>
+                            {trade.masterTakeProfit?.toFixed(5) || '-'}
+                          </td>
                           <td className={`px-4 py-3 text-sm ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{trade.followerClosePrice?.toFixed(5) || '-'}</td>
                           <td className={`px-4 py-3 text-sm font-medium ${(trade.rawPnl || 0) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
                             ${(trade.rawPnl || 0).toFixed(2)}
@@ -1195,6 +1203,12 @@ const CopyTradePage = () => {
                         History
                       </button>
                       <button
+                        onClick={() => setCommissionView('daily')}
+                        className={`flex-1 px-3 py-1.5 rounded text-sm ${commissionView === 'daily' ? 'bg-purple-500 text-white' : 'text-gray-500'}`}
+                      >
+                        Daily
+                      </button>
+                      <button
                         onClick={() => { setCommissionView('summary'); fetchUserSummary(); }}
                         className={`flex-1 px-3 py-1.5 rounded text-sm ${commissionView === 'summary' ? 'bg-purple-500 text-white' : 'text-gray-500'}`}
                       >
@@ -1265,6 +1279,70 @@ const CopyTradePage = () => {
                 </div>
               )}
 
+              {/* Daily Breakdown View */}
+              {commissionView === 'daily' && (
+                <div className="space-y-4 mb-6">
+                  {myCommissions.length === 0 ? (
+                    <div className={`${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'} rounded-xl border p-12 text-center`}>
+                      <Calendar size={48} className="mx-auto text-gray-600 mb-4" />
+                      <p className="text-gray-500">No commission records yet</p>
+                    </div>
+                  ) : (
+                    Object.entries(
+                      myCommissions.reduce((acc, comm) => {
+                        const day = comm.tradingDay;
+                        if (!acc[day]) acc[day] = [];
+                        acc[day].push(comm);
+                        return acc;
+                      }, {})
+                    ).sort((a, b) => b[0].localeCompare(a[0])).map(([date, trades]) => {
+                      const dayTotal = trades.reduce((sum, t) => sum + (t.masterShare || 0), 0);
+                      const dayProfit = trades.reduce((sum, t) => sum + (t.dailyProfit || 0), 0);
+                      return (
+                        <div key={date} className={`${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'} rounded-xl border overflow-hidden`}>
+                          {/* Date Header */}
+                          <div className={`px-4 py-3 ${isDarkMode ? 'bg-dark-700' : 'bg-gray-50'} flex flex-wrap justify-between items-center gap-2`}>
+                            <div>
+                              <span className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{date}</span>
+                              <span className="text-gray-500 text-sm ml-2">({trades.length} trades)</span>
+                            </div>
+                            <div className="flex gap-4 text-sm">
+                              <span className="text-green-500">P/L: ${dayProfit.toFixed(2)}</span>
+                              <span className="text-purple-400 font-bold">Commission: ${dayTotal.toFixed(2)}</span>
+                            </div>
+                          </div>
+                          {/* Trades for this day */}
+                          <div className={`divide-y ${isDarkMode ? 'divide-gray-700' : 'divide-gray-200'}`}>
+                            {trades.map(comm => (
+                              <div key={comm._id} className="px-4 py-3 flex flex-wrap justify-between items-center gap-2">
+                                <div className="flex items-center gap-3">
+                                  <div>
+                                    <p className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                                      {comm.followerUserId?.firstName || 'User'} {comm.followerUserId?.lastName || ''}
+                                    </p>
+                                    <div className="flex items-center gap-2 text-sm">
+                                      <span className={isDarkMode ? 'text-gray-400' : 'text-gray-600'}>{comm.tradeId?.symbol || '-'}</span>
+                                      <span className={`text-xs px-1.5 py-0.5 rounded ${comm.tradeId?.side === 'BUY' ? 'bg-green-500/20 text-green-500' : 'bg-red-500/20 text-red-500'}`}>
+                                        {comm.tradeId?.side || '-'}
+                                      </span>
+                                      <span className="text-gray-500">{comm.tradeId?.followerLotSize?.toFixed(2) || '-'} lots</span>
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <p className="text-green-500 font-medium">${comm.dailyProfit?.toFixed(2)}</p>
+                                  <p className="text-purple-400 text-sm">Your Share: ${comm.masterShare?.toFixed(2)}</p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              )}
+
               {/* Commission History */}
               {commissionView === 'history' && (
               <div className={`${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'} rounded-xl border`}>
@@ -1298,6 +1376,18 @@ const CopyTradePage = () => {
                             {comm.status}
                           </span>
                         </div>
+                        {/* Trade Details Row */}
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                            {comm.tradeId?.symbol || '-'}
+                          </span>
+                          <span className={`text-xs px-1.5 py-0.5 rounded ${comm.tradeId?.side === 'BUY' ? 'bg-green-500/20 text-green-500' : 'bg-red-500/20 text-red-500'}`}>
+                            {comm.tradeId?.side || '-'}
+                          </span>
+                          <span className="text-gray-500 text-xs">
+                            {comm.tradeId?.followerLotSize?.toFixed(2) || '-'} lots
+                          </span>
+                        </div>
                         <div className="grid grid-cols-3 gap-2 text-sm">
                           <div>
                             <p className="text-gray-500 text-xs">Trade P/L</p>
@@ -1322,6 +1412,9 @@ const CopyTradePage = () => {
                         <tr>
                           <th className={`text-left text-xs font-medium px-4 py-3 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Date</th>
                           <th className={`text-left text-xs font-medium px-4 py-3 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Follower</th>
+                          <th className={`text-left text-xs font-medium px-4 py-3 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Symbol</th>
+                          <th className={`text-left text-xs font-medium px-4 py-3 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Side</th>
+                          <th className={`text-left text-xs font-medium px-4 py-3 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Lots</th>
                           <th className={`text-left text-xs font-medium px-4 py-3 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Trade P/L</th>
                           <th className={`text-left text-xs font-medium px-4 py-3 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Rate</th>
                           <th className={`text-left text-xs font-medium px-4 py-3 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Your Share</th>
@@ -1334,6 +1427,13 @@ const CopyTradePage = () => {
                             <td className={`px-4 py-3 text-sm ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{comm.tradingDay}</td>
                             <td className={`px-4 py-3 text-sm ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                               {comm.followerUserId?.firstName || 'User'} {comm.followerUserId?.lastName || ''}
+                            </td>
+                            <td className={`px-4 py-3 text-sm ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{comm.tradeId?.symbol || '-'}</td>
+                            <td className={`px-4 py-3 text-sm ${comm.tradeId?.side === 'BUY' ? 'text-green-500' : 'text-red-500'}`}>
+                              {comm.tradeId?.side || '-'}
+                            </td>
+                            <td className={`px-4 py-3 text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                              {comm.tradeId?.followerLotSize?.toFixed(2) || '-'}
                             </td>
                             <td className="px-4 py-3 text-sm text-green-500 font-medium">${comm.dailyProfit?.toFixed(2)}</td>
                             <td className={`px-4 py-3 text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>{comm.commissionPercentage}%</td>
@@ -1351,6 +1451,26 @@ const CopyTradePage = () => {
                         ))}
                       </tbody>
                     </table>
+                    {/* Daily Totals Summary */}
+                    {commissionTotals && (
+                      <div className={`px-4 py-3 border-t ${isDarkMode ? 'border-gray-700 bg-dark-700' : 'border-gray-200 bg-gray-50'}`}>
+                        <div className="flex flex-wrap justify-between items-center gap-4 text-sm">
+                          <div className="flex items-center gap-6">
+                            <div>
+                              <span className="text-gray-500">Total Trades P/L: </span>
+                              <span className="text-green-500 font-bold">${commissionTotals.totalDailyProfit?.toFixed(2) || '0.00'}</span>
+                            </div>
+                            <div>
+                              <span className="text-gray-500">Total Commission: </span>
+                              <span className="text-purple-400 font-bold">${commissionTotals.totalMasterShare?.toFixed(2) || '0.00'}</span>
+                            </div>
+                          </div>
+                          <div className="text-gray-500 text-xs">
+                            {myCommissions.length} trade(s)
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

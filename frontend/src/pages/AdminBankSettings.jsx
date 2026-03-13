@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import AdminLayout from '../components/AdminLayout'
+import { useTheme } from '../context/ThemeContext'
 import { 
   Building2,
   Plus,
@@ -20,6 +21,7 @@ import {
 import { API_URL } from '../config/api'
 
 const AdminBankSettings = () => {
+  const { isDarkMode } = useTheme()
   const [paymentMethods, setPaymentMethods] = useState([])
   const [loading, setLoading] = useState(true)
   const [showAddModal, setShowAddModal] = useState(false)
@@ -841,9 +843,9 @@ const AdminBankSettings = () => {
       {/* Currency Modal */}
       {showCurrencyModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-dark-800 rounded-2xl w-full max-w-md">
-            <div className="p-6 border-b border-gray-800 flex items-center justify-between">
-              <h2 className="text-xl font-bold text-white">
+          <div className={`rounded-2xl w-full max-w-md ${isDarkMode ? 'bg-dark-800' : 'bg-white shadow-xl'}`}>
+            <div className={`p-6 border-b flex items-center justify-between ${isDarkMode ? 'border-gray-800' : 'border-gray-200'}`}>
+              <h2 className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                 {editingCurrency ? 'Edit Currency' : 'Add Currency'}
               </h2>
               <button onClick={() => setShowCurrencyModal(false)} className="text-gray-400 hover:text-white">
@@ -860,7 +862,7 @@ const AdminBankSettings = () => {
                     onChange={(e) => setCurrencyForm({ ...currencyForm, currency: e.target.value.toUpperCase() })}
                     placeholder="e.g., INR"
                     maxLength={3}
-                    className="w-full px-3 py-2 bg-dark-700 border border-gray-700 rounded-lg text-white uppercase"
+                    className={`w-full px-3 py-2 border rounded-lg uppercase ${isDarkMode ? 'bg-dark-700 border-gray-700 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'}`}
                   />
                 </div>
                 <div>
@@ -871,7 +873,7 @@ const AdminBankSettings = () => {
                     onChange={(e) => setCurrencyForm({ ...currencyForm, symbol: e.target.value })}
                     placeholder="e.g., ₹"
                     maxLength={3}
-                    className="w-full px-3 py-2 bg-dark-700 border border-gray-700 rounded-lg text-white"
+                    className={`w-full px-3 py-2 border rounded-lg ${isDarkMode ? 'bg-dark-700 border-gray-700 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'}`}
                   />
                 </div>
               </div>
@@ -884,7 +886,7 @@ const AdminBankSettings = () => {
                   value={currencyForm.rateToUSD}
                   onChange={(e) => setCurrencyForm({ ...currencyForm, rateToUSD: parseFloat(e.target.value) || 0 })}
                   placeholder="e.g., 83.50"
-                  className="w-full px-3 py-2 bg-dark-700 border border-gray-700 rounded-lg text-white"
+                  className={`w-full px-3 py-2 border rounded-lg ${isDarkMode ? 'bg-dark-700 border-gray-700 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'}`}
                 />
                 <p className="text-gray-500 text-xs mt-1">Base exchange rate without markup</p>
               </div>
@@ -897,7 +899,7 @@ const AdminBankSettings = () => {
                   value={currencyForm.markup}
                   onChange={(e) => setCurrencyForm({ ...currencyForm, markup: parseFloat(e.target.value) || 0 })}
                   placeholder="e.g., 2.5"
-                  className="w-full px-3 py-2 bg-dark-700 border border-gray-700 rounded-lg text-white"
+                  className={`w-full px-3 py-2 border rounded-lg ${isDarkMode ? 'bg-dark-700 border-gray-700 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'}`}
                 />
                 <p className="text-gray-500 text-xs mt-1">Additional percentage added to the exchange rate</p>
               </div>
@@ -955,9 +957,9 @@ const AdminBankSettings = () => {
       {/* Add/Edit Modal */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-dark-800 rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-xl border border-gray-700">
-            <div className="p-6 border-b border-gray-700 flex items-center justify-between">
-              <h2 className="text-xl font-bold text-white">
+          <div className={`rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-xl border ${isDarkMode ? 'bg-dark-800 border-gray-700' : 'bg-white border-gray-200'}`}>
+            <div className={`p-6 border-b flex items-center justify-between ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+              <h2 className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                 {editingMethod ? 'Edit Payment Method' : 'Add Payment Method'}
               </h2>
               <button onClick={() => setShowAddModal(false)} className="text-gray-400 hover:text-white">
@@ -995,7 +997,7 @@ const AdminBankSettings = () => {
                       value={form.bankName}
                       onChange={(e) => setForm({ ...form, bankName: e.target.value })}
                       placeholder="e.g., HDFC Bank"
-                      className="w-full px-3 py-2 bg-dark-700 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-red-500"
+                      className={`w-full px-3 py-2 border rounded-lg placeholder-gray-500 focus:outline-none focus:border-red-500 ${isDarkMode ? 'bg-dark-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'}`}
                     />
                   </div>
                   <div>
@@ -1005,7 +1007,7 @@ const AdminBankSettings = () => {
                       value={form.accountHolderName}
                       onChange={(e) => setForm({ ...form, accountHolderName: e.target.value })}
                       placeholder="e.g., John Doe"
-                      className="w-full px-3 py-2 bg-dark-700 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-red-500"
+                      className={`w-full px-3 py-2 border rounded-lg placeholder-gray-500 focus:outline-none focus:border-red-500 ${isDarkMode ? 'bg-dark-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'}`}
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
@@ -1016,7 +1018,7 @@ const AdminBankSettings = () => {
                         value={form.accountNumber}
                         onChange={(e) => setForm({ ...form, accountNumber: e.target.value })}
                         placeholder="e.g., 1234567890"
-                        className="w-full px-3 py-2 bg-dark-700 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-red-500"
+                        className={`w-full px-3 py-2 border rounded-lg placeholder-gray-500 focus:outline-none focus:border-red-500 ${isDarkMode ? 'bg-dark-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'}`}
                       />
                     </div>
                     <div>
@@ -1026,7 +1028,7 @@ const AdminBankSettings = () => {
                         value={form.ifscCode}
                         onChange={(e) => setForm({ ...form, ifscCode: e.target.value })}
                         placeholder="e.g., HDFC0001234"
-                        className="w-full px-3 py-2 bg-dark-700 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-red-500"
+                        className={`w-full px-3 py-2 border rounded-lg placeholder-gray-500 focus:outline-none focus:border-red-500 ${isDarkMode ? 'bg-dark-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'}`}
                       />
                     </div>
                   </div>
@@ -1042,7 +1044,7 @@ const AdminBankSettings = () => {
                     value={form.upiId}
                     onChange={(e) => setForm({ ...form, upiId: e.target.value })}
                     placeholder="e.g., yourname@upi"
-                    className="w-full px-3 py-2 bg-dark-700 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-red-500"
+                    className={`w-full px-3 py-2 border rounded-lg placeholder-gray-500 focus:outline-none focus:border-red-500 ${isDarkMode ? 'bg-dark-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'}`}
                   />
                 </div>
               )}

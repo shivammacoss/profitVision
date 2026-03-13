@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import AdminLayout from '../components/AdminLayout'
+import { useTheme } from '../context/ThemeContext'
 import { 
   Search,
   Mail,
@@ -30,6 +31,7 @@ import {
 import { API_URL } from '../config/api'
 
 const AdminUserManagement = () => {
+  const { isDarkMode } = useTheme()
   const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
@@ -580,9 +582,9 @@ const AdminUserManagement = () => {
 
     return (
       <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-        <div className="bg-dark-800 rounded-2xl w-full max-w-md border border-gray-700 overflow-hidden">
+        <div className={`rounded-2xl w-full max-w-md border overflow-hidden max-h-[90vh] flex flex-col ${isDarkMode ? 'bg-dark-800 border-gray-700' : 'bg-white border-gray-200 shadow-xl'}`}>
           {/* Modal Header */}
-          <div className="flex items-center justify-between p-4 border-b border-gray-700">
+          <div className={`flex items-center justify-between p-4 border-b shrink-0 ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-accent-green/20 rounded-full flex items-center justify-center">
                 <span className="text-accent-green font-medium">
@@ -590,20 +592,20 @@ const AdminUserManagement = () => {
                 </span>
               </div>
               <div>
-                <h3 className="text-white font-semibold">{selectedUser.firstName}</h3>
+                <h3 className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{selectedUser.firstName}</h3>
                 <p className="text-gray-500 text-sm">{selectedUser.email}</p>
               </div>
             </div>
             <button 
               onClick={closeModal}
-              className="p-2 hover:bg-dark-700 rounded-lg transition-colors"
+              className={`p-2 rounded-lg transition-colors ${isDarkMode ? 'hover:bg-dark-700' : 'hover:bg-gray-100'}`}
             >
               <X size={18} className="text-gray-400" />
             </button>
           </div>
 
           {/* Modal Content */}
-          <div className="p-4">
+          <div className="p-4 overflow-y-auto flex-1">
             {/* Message */}
             {message.text && (
               <div className={`mb-4 p-3 rounded-lg flex items-center gap-2 ${
@@ -618,35 +620,35 @@ const AdminUserManagement = () => {
             {modalType === 'view' && (
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-dark-700 p-3 rounded-lg">
-                    <p className="text-gray-500 text-xs mb-1">Full Name</p>
-                    <p className="text-white">{selectedUser.firstName}</p>
+                  <div className={`p-3 rounded-lg ${isDarkMode ? 'bg-dark-700' : 'bg-gray-100'}`}>
+                    <p className={`text-xs mb-1 ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>Full Name</p>
+                    <p className={isDarkMode ? 'text-white' : 'text-gray-900'}>{selectedUser.firstName}</p>
                   </div>
-                  <div className="bg-dark-700 p-3 rounded-lg">
-                    <p className="text-gray-500 text-xs mb-1">Phone</p>
-                    <p className="text-white">{selectedUser.phone || 'N/A'}</p>
+                  <div className={`p-3 rounded-lg ${isDarkMode ? 'bg-dark-700' : 'bg-gray-100'}`}>
+                    <p className={`text-xs mb-1 ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>Phone</p>
+                    <p className={isDarkMode ? 'text-white' : 'text-gray-900'}>{selectedUser.phone || 'N/A'}</p>
                   </div>
-                  <div className="bg-dark-700 p-3 rounded-lg">
-                    <p className="text-gray-500 text-xs mb-1">Joined</p>
-                    <p className="text-white">{formatDate(selectedUser.createdAt)}</p>
+                  <div className={`p-3 rounded-lg ${isDarkMode ? 'bg-dark-700' : 'bg-gray-100'}`}>
+                    <p className={`text-xs mb-1 ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>Joined</p>
+                    <p className={isDarkMode ? 'text-white' : 'text-gray-900'}>{formatDate(selectedUser.createdAt)}</p>
                   </div>
-                  <div className="bg-dark-700 p-3 rounded-lg">
-                    <p className="text-gray-500 text-xs mb-1">Status</p>
+                  <div className={`p-3 rounded-lg ${isDarkMode ? 'bg-dark-700' : 'bg-gray-100'}`}>
+                    <p className={`text-xs mb-1 ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>Status</p>
                     <p className={`${selectedUser.isBanned ? 'text-red-500' : selectedUser.isBlocked ? 'text-yellow-500' : 'text-green-500'}`}>
                       {selectedUser.isBanned ? 'Banned' : selectedUser.isBlocked ? 'Blocked' : 'Active'}
                     </p>
                   </div>
                 </div>
-                <div className="bg-dark-700 p-3 rounded-lg">
-                  <p className="text-gray-500 text-xs mb-1">Email</p>
-                  <p className="text-white">{selectedUser.email}</p>
+                <div className={`p-3 rounded-lg ${isDarkMode ? 'bg-dark-700' : 'bg-gray-100'}`}>
+                  <p className={`text-xs mb-1 ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>Email</p>
+                  <p className={isDarkMode ? 'text-white' : 'text-gray-900'}>{selectedUser.email}</p>
                 </div>
                 {/* Wallet Balance with Actions */}
                 <div className="bg-gradient-to-r from-green-500/10 to-teal-500/10 border border-green-500/30 p-4 rounded-lg">
                   <div className="flex items-center justify-between mb-2">
                     <div>
                       <p className="text-gray-400 text-xs mb-1">💰 Main Wallet Balance</p>
-                      <p className="text-white text-2xl font-bold">${userWalletBalance?.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) || '0.00'}</p>
+                      <p className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>${userWalletBalance?.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) || '0.00'}</p>
                     </div>
                     <div className="flex gap-2">
                       <button 
@@ -739,20 +741,20 @@ const AdminUserManagement = () => {
                   <h4 className="font-semibold">Trading Accounts</h4>
                 </div>
                 {userAccounts.length === 0 ? (
-                  <div className="p-4 text-center text-gray-500 text-sm bg-dark-700 rounded-lg">
+                  <div className={`p-4 text-center text-gray-500 text-sm rounded-lg ${isDarkMode ? 'bg-dark-700' : 'bg-gray-100'}`}>
                     No trading accounts found
                   </div>
                 ) : (
                   <div className="space-y-3 max-h-[50vh] overflow-y-auto">
                     {userAccounts.map(acc => (
-                      <div key={acc._id} className="bg-dark-700 rounded-lg p-4 border border-gray-700">
+                      <div key={acc._id} className={`rounded-lg p-4 border ${isDarkMode ? 'bg-dark-700 border-gray-700' : 'bg-gray-50 border-gray-200'}`}>
                         <div className="flex items-center justify-between mb-3">
                           <div>
-                            <p className="text-white font-medium">{acc.accountId}</p>
+                            <p className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{acc.accountId}</p>
                             <p className="text-gray-500 text-xs">{acc.accountTypeId?.name || 'Standard'} • Leverage: {acc.leverage}</p>
                           </div>
                           <div className="text-right">
-                            <p className="text-white text-lg font-bold">${acc.balance?.toFixed(2) || '0.00'}</p>
+                            <p className={`text-lg font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>${acc.balance?.toFixed(2) || '0.00'}</p>
                             {acc.credit > 0 && (
                               <p className="text-purple-400 text-xs">Credit: ${acc.credit?.toFixed(2)}</p>
                             )}
@@ -791,7 +793,7 @@ const AdminUserManagement = () => {
                 <div className="flex gap-2 pt-2">
                   <button 
                     onClick={() => setModalType('view')}
-                    className="flex-1 py-3 bg-dark-700 text-gray-400 rounded-lg hover:bg-dark-600 transition-colors"
+                    className={`flex-1 py-3 rounded-lg transition-colors ${isDarkMode ? 'bg-dark-700 text-gray-400 hover:bg-dark-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
                   >
                     Back
                   </button>
@@ -813,7 +815,7 @@ const AdminUserManagement = () => {
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     placeholder="Enter new password"
-                    className="w-full bg-dark-700 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
+                    className={`w-full border rounded-lg px-4 py-3 placeholder-gray-500 focus:outline-none focus:border-blue-500 ${isDarkMode ? 'bg-dark-700 border-gray-700 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'}`}
                   />
                 </div>
                 <div>
@@ -823,13 +825,13 @@ const AdminUserManagement = () => {
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="Confirm new password"
-                    className="w-full bg-dark-700 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
+                    className={`w-full border rounded-lg px-4 py-3 placeholder-gray-500 focus:outline-none focus:border-blue-500 ${isDarkMode ? 'bg-dark-700 border-gray-700 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'}`}
                   />
                 </div>
                 <div className="flex gap-2 pt-2">
                   <button 
                     onClick={() => setModalType('view')}
-                    className="flex-1 py-3 bg-dark-700 text-gray-400 rounded-lg hover:bg-dark-600 transition-colors"
+                    className={`flex-1 py-3 rounded-lg transition-colors ${isDarkMode ? 'bg-dark-700 text-gray-400 hover:bg-dark-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
                   >
                     Back
                   </button>
@@ -864,7 +866,7 @@ const AdminUserManagement = () => {
                     placeholder="Enter amount"
                     min="0"
                     step="0.01"
-                    className="w-full bg-dark-700 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-orange-500"
+                    className={`w-full border rounded-lg px-4 py-3 placeholder-gray-500 focus:outline-none focus:border-orange-500 ${isDarkMode ? 'bg-dark-700 border-gray-700 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'}`}
                   />
                 </div>
                 <div>
@@ -874,13 +876,13 @@ const AdminUserManagement = () => {
                     value={deductReason}
                     onChange={(e) => setDeductReason(e.target.value)}
                     placeholder="Enter reason for deduction"
-                    className="w-full bg-dark-700 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-orange-500"
+                    className={`w-full border rounded-lg px-4 py-3 placeholder-gray-500 focus:outline-none focus:border-orange-500 ${isDarkMode ? 'bg-dark-700 border-gray-700 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'}`}
                   />
                 </div>
                 <div className="flex gap-2 pt-2">
                   <button 
                     onClick={() => setModalType('view')}
-                    className="flex-1 py-3 bg-dark-700 text-gray-400 rounded-lg hover:bg-dark-600 transition-colors"
+                    className={`flex-1 py-3 rounded-lg transition-colors ${isDarkMode ? 'bg-dark-700 text-gray-400 hover:bg-dark-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
                   >
                     Back
                   </button>
@@ -915,7 +917,7 @@ const AdminUserManagement = () => {
                     placeholder="Enter amount"
                     min="0"
                     step="0.01"
-                    className="w-full bg-dark-700 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-green-500"
+                    className={`w-full border rounded-lg px-4 py-3 placeholder-gray-500 focus:outline-none focus:border-green-500 ${isDarkMode ? 'bg-dark-700 border-gray-700 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'}`}
                   />
                 </div>
                 <div>
@@ -925,13 +927,13 @@ const AdminUserManagement = () => {
                     value={addFundReason}
                     onChange={(e) => setAddFundReason(e.target.value)}
                     placeholder="Enter reason for adding funds"
-                    className="w-full bg-dark-700 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-green-500"
+                    className={`w-full border rounded-lg px-4 py-3 placeholder-gray-500 focus:outline-none focus:border-green-500 ${isDarkMode ? 'bg-dark-700 border-gray-700 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'}`}
                   />
                 </div>
                 <div className="flex gap-2 pt-2">
                   <button 
                     onClick={() => setModalType('view')}
-                    className="flex-1 py-3 bg-dark-700 text-gray-400 rounded-lg hover:bg-dark-600 transition-colors"
+                    className={`flex-1 py-3 rounded-lg transition-colors ${isDarkMode ? 'bg-dark-700 text-gray-400 hover:bg-dark-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
                   >
                     Back
                   </button>
@@ -966,14 +968,14 @@ const AdminUserManagement = () => {
                       value={blockReason}
                       onChange={(e) => setBlockReason(e.target.value)}
                       placeholder="Enter reason for blocking"
-                      className="w-full bg-dark-700 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-yellow-500"
+                      className={`w-full border rounded-lg px-4 py-3 placeholder-gray-500 focus:outline-none focus:border-yellow-500 ${isDarkMode ? 'bg-dark-700 border-gray-700 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'}`}
                     />
                   </div>
                 )}
                 <div className="flex gap-2 pt-2">
                   <button 
                     onClick={() => setModalType('view')}
-                    className="flex-1 py-3 bg-dark-700 text-gray-400 rounded-lg hover:bg-dark-600 transition-colors"
+                    className={`flex-1 py-3 rounded-lg transition-colors ${isDarkMode ? 'bg-dark-700 text-gray-400 hover:bg-dark-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
                   >
                     Back
                   </button>
@@ -1012,14 +1014,14 @@ const AdminUserManagement = () => {
                       value={blockReason}
                       onChange={(e) => setBlockReason(e.target.value)}
                       placeholder="Enter reason for banning"
-                      className="w-full bg-dark-700 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-red-500"
+                      className={`w-full border rounded-lg px-4 py-3 placeholder-gray-500 focus:outline-none focus:border-red-500 ${isDarkMode ? 'bg-dark-700 border-gray-700 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'}`}
                     />
                   </div>
                 )}
                 <div className="flex gap-2 pt-2">
                   <button 
                     onClick={() => setModalType('view')}
-                    className="flex-1 py-3 bg-dark-700 text-gray-400 rounded-lg hover:bg-dark-600 transition-colors"
+                    className={`flex-1 py-3 rounded-lg transition-colors ${isDarkMode ? 'bg-dark-700 text-gray-400 hover:bg-dark-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
                   >
                     Back
                   </button>
@@ -1072,7 +1074,7 @@ const AdminUserManagement = () => {
                     placeholder="Enter credit amount"
                     min="0"
                     step="0.01"
-                    className="w-full bg-dark-700 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500"
+                    className={`w-full border rounded-lg px-4 py-3 placeholder-gray-500 focus:outline-none focus:border-purple-500 ${isDarkMode ? 'bg-dark-700 border-gray-700 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'}`}
                   />
                 </div>
                 <div>
@@ -1082,13 +1084,13 @@ const AdminUserManagement = () => {
                     value={creditReason}
                     onChange={(e) => setCreditReason(e.target.value)}
                     placeholder="e.g., Deposit bonus, Promotion"
-                    className="w-full bg-dark-700 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500"
+                    className={`w-full border rounded-lg px-4 py-3 placeholder-gray-500 focus:outline-none focus:border-purple-500 ${isDarkMode ? 'bg-dark-700 border-gray-700 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'}`}
                   />
                 </div>
                 <div className="flex gap-2 pt-2">
                   <button 
                     onClick={() => setModalType('view')}
-                    className="flex-1 py-3 bg-dark-700 text-gray-400 rounded-lg hover:bg-dark-600 transition-colors"
+                    className={`flex-1 py-3 rounded-lg transition-colors ${isDarkMode ? 'bg-dark-700 text-gray-400 hover:bg-dark-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
                   >
                     Back
                   </button>
@@ -1129,7 +1131,7 @@ const AdminUserManagement = () => {
                     placeholder="Enter amount to remove"
                     min="0"
                     step="0.01"
-                    className="w-full bg-dark-700 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-pink-500"
+                    className={`w-full border rounded-lg px-4 py-3 placeholder-gray-500 focus:outline-none focus:border-pink-500 ${isDarkMode ? 'bg-dark-700 border-gray-700 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'}`}
                   />
                 </div>
                 <div>
@@ -1139,13 +1141,13 @@ const AdminUserManagement = () => {
                     value={creditReason}
                     onChange={(e) => setCreditReason(e.target.value)}
                     placeholder="e.g., Credit expired, Adjustment"
-                    className="w-full bg-dark-700 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-pink-500"
+                    className={`w-full border rounded-lg px-4 py-3 placeholder-gray-500 focus:outline-none focus:border-pink-500 ${isDarkMode ? 'bg-dark-700 border-gray-700 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'}`}
                   />
                 </div>
                 <div className="flex gap-2 pt-2">
                   <button 
                     onClick={() => { setCreditAmount(''); setCreditReason(''); setModalType('tradingAccounts'); }}
-                    className="flex-1 py-3 bg-dark-700 text-gray-400 rounded-lg hover:bg-dark-600 transition-colors"
+                    className={`flex-1 py-3 rounded-lg transition-colors ${isDarkMode ? 'bg-dark-700 text-gray-400 hover:bg-dark-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
                   >
                     Back
                   </button>
@@ -1178,7 +1180,7 @@ const AdminUserManagement = () => {
                 <div className="flex gap-2 pt-2">
                   <button 
                     onClick={closeModal}
-                    className="flex-1 py-3 bg-dark-700 text-gray-400 rounded-lg hover:bg-dark-600 transition-colors"
+                    className={`flex-1 py-3 rounded-lg transition-colors ${isDarkMode ? 'bg-dark-700 text-gray-400 hover:bg-dark-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
                   >
                     Cancel
                   </button>
@@ -1213,7 +1215,7 @@ const AdminUserManagement = () => {
                     placeholder="Enter amount"
                     min="0"
                     step="0.01"
-                    className="w-full bg-dark-700 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-green-500"
+                    className={`w-full border rounded-lg px-4 py-3 placeholder-gray-500 focus:outline-none focus:border-green-500 ${isDarkMode ? 'bg-dark-700 border-gray-700 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'}`}
                   />
                 </div>
                 <div>
@@ -1223,13 +1225,13 @@ const AdminUserManagement = () => {
                     value={addFundReason}
                     onChange={(e) => setAddFundReason(e.target.value)}
                     placeholder="Enter reason"
-                    className="w-full bg-dark-700 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-green-500"
+                    className={`w-full border rounded-lg px-4 py-3 placeholder-gray-500 focus:outline-none focus:border-green-500 ${isDarkMode ? 'bg-dark-700 border-gray-700 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'}`}
                   />
                 </div>
                 <div className="flex gap-2 pt-2">
                   <button 
                     onClick={() => setModalType('view')}
-                    className="flex-1 py-3 bg-dark-700 text-gray-400 rounded-lg hover:bg-dark-600 transition-colors"
+                    className={`flex-1 py-3 rounded-lg transition-colors ${isDarkMode ? 'bg-dark-700 text-gray-400 hover:bg-dark-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
                   >
                     Back
                   </button>
@@ -1264,7 +1266,7 @@ const AdminUserManagement = () => {
                     placeholder="Enter amount"
                     min="0"
                     step="0.01"
-                    className="w-full bg-dark-700 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-orange-500"
+                    className={`w-full border rounded-lg px-4 py-3 placeholder-gray-500 focus:outline-none focus:border-orange-500 ${isDarkMode ? 'bg-dark-700 border-gray-700 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'}`}
                   />
                 </div>
                 <div>
@@ -1274,13 +1276,13 @@ const AdminUserManagement = () => {
                     value={deductReason}
                     onChange={(e) => setDeductReason(e.target.value)}
                     placeholder="Enter reason"
-                    className="w-full bg-dark-700 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-orange-500"
+                    className={`w-full border rounded-lg px-4 py-3 placeholder-gray-500 focus:outline-none focus:border-orange-500 ${isDarkMode ? 'bg-dark-700 border-gray-700 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'}`}
                   />
                 </div>
                 <div className="flex gap-2 pt-2">
                   <button 
                     onClick={() => setModalType('view')}
-                    className="flex-1 py-3 bg-dark-700 text-gray-400 rounded-lg hover:bg-dark-600 transition-colors"
+                    className={`flex-1 py-3 rounded-lg transition-colors ${isDarkMode ? 'bg-dark-700 text-gray-400 hover:bg-dark-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
                   >
                     Back
                   </button>
@@ -1316,7 +1318,7 @@ const AdminUserManagement = () => {
                     placeholder="Enter amount"
                     min="0"
                     step="0.01"
-                    className="w-full bg-dark-700 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-green-500"
+                    className={`w-full border rounded-lg px-4 py-3 placeholder-gray-500 focus:outline-none focus:border-green-500 ${isDarkMode ? 'bg-dark-700 border-gray-700 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'}`}
                   />
                 </div>
                 <div>
@@ -1326,13 +1328,13 @@ const AdminUserManagement = () => {
                     value={accountFundReason}
                     onChange={(e) => setAccountFundReason(e.target.value)}
                     placeholder="Enter reason"
-                    className="w-full bg-dark-700 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-green-500"
+                    className={`w-full border rounded-lg px-4 py-3 placeholder-gray-500 focus:outline-none focus:border-green-500 ${isDarkMode ? 'bg-dark-700 border-gray-700 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'}`}
                   />
                 </div>
                 <div className="flex gap-2 pt-2">
                   <button 
                     onClick={() => { setAccountFundAmount(''); setAccountFundReason(''); setModalType('view'); }}
-                    className="flex-1 py-3 bg-dark-700 text-gray-400 rounded-lg hover:bg-dark-600 transition-colors"
+                    className={`flex-1 py-3 rounded-lg transition-colors ${isDarkMode ? 'bg-dark-700 text-gray-400 hover:bg-dark-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
                   >
                     Back
                   </button>
@@ -1368,7 +1370,7 @@ const AdminUserManagement = () => {
                     placeholder="Enter amount"
                     min="0"
                     step="0.01"
-                    className="w-full bg-dark-700 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-orange-500"
+                    className={`w-full border rounded-lg px-4 py-3 placeholder-gray-500 focus:outline-none focus:border-orange-500 ${isDarkMode ? 'bg-dark-700 border-gray-700 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'}`}
                   />
                 </div>
                 <div>
@@ -1378,13 +1380,13 @@ const AdminUserManagement = () => {
                     value={accountFundReason}
                     onChange={(e) => setAccountFundReason(e.target.value)}
                     placeholder="Enter reason"
-                    className="w-full bg-dark-700 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-orange-500"
+                    className={`w-full border rounded-lg px-4 py-3 placeholder-gray-500 focus:outline-none focus:border-orange-500 ${isDarkMode ? 'bg-dark-700 border-gray-700 text-white' : 'bg-gray-50 border-gray-300 text-gray-900'}`}
                   />
                 </div>
                 <div className="flex gap-2 pt-2">
                   <button 
                     onClick={() => { setAccountFundAmount(''); setAccountFundReason(''); setModalType('view'); }}
-                    className="flex-1 py-3 bg-dark-700 text-gray-400 rounded-lg hover:bg-dark-600 transition-colors"
+                    className={`flex-1 py-3 rounded-lg transition-colors ${isDarkMode ? 'bg-dark-700 text-gray-400 hover:bg-dark-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
                   >
                     Back
                   </button>
@@ -1548,11 +1550,11 @@ const AdminUserManagement = () => {
           </div>
         </div>
       ) : (
-      <div className="bg-dark-800 rounded-xl border border-gray-800 overflow-hidden">
+      <div className={`rounded-xl border overflow-hidden ${isDarkMode ? 'bg-dark-800 border-gray-800' : 'bg-white border-gray-200 shadow-sm'}`}>
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 sm:p-5 border-b border-gray-800">
+        <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 sm:p-5 border-b ${isDarkMode ? 'border-gray-800' : 'border-gray-200'}`}>
           <div>
-            <h2 className="text-white font-semibold text-lg">All Users</h2>
+            <h2 className={`font-semibold text-lg ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>All Users</h2>
             <p className="text-gray-500 text-sm">{users.length} total users</p>
           </div>
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
@@ -1563,12 +1565,12 @@ const AdminUserManagement = () => {
                 placeholder="Search users..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full sm:w-64 bg-dark-700 border border-gray-700 rounded-lg pl-10 pr-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-gray-600"
+                className={`w-full sm:w-64 border rounded-lg pl-10 pr-4 py-2 placeholder-gray-500 focus:outline-none ${isDarkMode ? 'bg-dark-700 border-gray-700 text-white focus:border-gray-600' : 'bg-gray-50 border-gray-300 text-gray-900 focus:border-gray-400'}`}
               />
             </div>
             <button 
               onClick={fetchUsers}
-              className="p-2 bg-dark-700 rounded-lg hover:bg-dark-600 transition-colors flex items-center justify-center gap-2"
+              className={`p-2 rounded-lg transition-colors flex items-center justify-center gap-2 ${isDarkMode ? 'bg-dark-700 hover:bg-dark-600' : 'bg-gray-100 hover:bg-gray-200'}`}
             >
               <RefreshCw size={18} className={`text-gray-400 ${loading ? 'animate-spin' : ''}`} />
               <span className="sm:hidden text-gray-400 text-sm">Refresh</span>
@@ -1590,7 +1592,7 @@ const AdminUserManagement = () => {
             filteredUsers.map((user) => (
               <div 
                 key={user._id} 
-                className="bg-dark-700 rounded-xl p-4 border border-gray-700"
+                className={`rounded-xl p-4 border ${isDarkMode ? 'bg-dark-700 border-gray-700' : 'bg-gray-50 border-gray-200'}`}
               >
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center gap-3">
@@ -1600,7 +1602,7 @@ const AdminUserManagement = () => {
                       </span>
                     </div>
                     <div>
-                      <p className="text-white font-medium">{user.firstName || 'Unknown'}</p>
+                      <p className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{user.firstName || 'Unknown'}</p>
                       <p className={`text-xs ${user.isBanned ? 'text-red-500' : user.isBlocked ? 'text-yellow-500' : 'text-green-500'}`}>
                         {user.isBanned ? 'Banned' : user.isBlocked ? 'Blocked' : 'Active'}
                       </p>
@@ -1665,14 +1667,14 @@ const AdminUserManagement = () => {
         <div className="hidden lg:block overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-gray-700">
-                <th className="text-left text-gray-500 text-sm font-medium py-3 px-4">User</th>
-                <th className="text-left text-gray-500 text-sm font-medium py-3 px-4">Email</th>
-                <th className="text-left text-gray-500 text-sm font-medium py-3 px-4">Phone</th>
-                <th className="text-left text-gray-500 text-sm font-medium py-3 px-4">Balance</th>
-                <th className="text-left text-gray-500 text-sm font-medium py-3 px-4">Status</th>
-                <th className="text-left text-gray-500 text-sm font-medium py-3 px-4">Joined</th>
-                <th className="text-left text-gray-500 text-sm font-medium py-3 px-4">Actions</th>
+              <tr className={`border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+                <th className={`text-left text-sm font-medium py-3 px-4 ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>User</th>
+                <th className={`text-left text-sm font-medium py-3 px-4 ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>Email</th>
+                <th className={`text-left text-sm font-medium py-3 px-4 ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>Phone</th>
+                <th className={`text-left text-sm font-medium py-3 px-4 ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>Balance</th>
+                <th className={`text-left text-sm font-medium py-3 px-4 ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>Status</th>
+                <th className={`text-left text-sm font-medium py-3 px-4 ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>Joined</th>
+                <th className={`text-left text-sm font-medium py-3 px-4 ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -1690,7 +1692,7 @@ const AdminUserManagement = () => {
                 </tr>
               ) : (
                 filteredUsers.map((user) => (
-                  <tr key={user._id} className="border-b border-gray-800 hover:bg-dark-700/50">
+                  <tr key={user._id} className={`border-b ${isDarkMode ? 'border-gray-800 hover:bg-dark-700/50' : 'border-gray-200 hover:bg-gray-50'}`}>
                     <td className="py-4 px-4">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 bg-accent-green/20 rounded-full flex items-center justify-center">
@@ -1698,7 +1700,7 @@ const AdminUserManagement = () => {
                             {user.firstName?.charAt(0)?.toUpperCase() || 'U'}
                           </span>
                         </div>
-                        <span className="text-white font-medium">{user.firstName || 'Unknown'}</span>
+                        <span className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{user.firstName || 'Unknown'}</span>
                       </div>
                     </td>
                     <td className="py-4 px-4">

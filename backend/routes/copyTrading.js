@@ -293,6 +293,7 @@ router.get('/master/commissions/:masterId', async (req, res) => {
     const commissions = await CopyCommission.find(query)
       .populate('followerUserId', 'firstName lastName email')
       .populate('followerAccountId', 'accountId')
+      .populate('tradeId', 'symbol side followerLotSize followerOpenPrice followerClosePrice')
       .sort({ createdAt: -1 })
       .limit(parseInt(limit))
 
