@@ -675,10 +675,10 @@ router.post('/follow', async (req, res) => {
       })
     }
 
-    // Create follower subscription with user's deposit amount as minimumCredit (limit)
-    // This enables auto-refill from wallet when credit drops below this amount
-    // User's join amount = their limit for auto-refill
-    const minimumCreditRequired = depositAmount
+    // Create follower subscription with PRODUCTION LOGIC:
+    // Master's minimumFollowerDeposit = minimumCredit (auto-refill threshold)
+    // User's depositAmount must be >= master's requirement
+    const minimumCreditRequired = master.minimumFollowerDeposit || 1000
     
     const follower = await CopyFollower.create({
       followerId: followerUserId,
@@ -692,7 +692,7 @@ router.post('/follow', async (req, res) => {
       initialDeposit: depositAmount,
       initialCredit: depositAmount,
       currentCredit: depositAmount,
-      minimumCredit: minimumCreditRequired, // Master's minimum deposit requirement
+      minimumCredit: minimumCreditRequired, // ✅ Master's requirement = auto-refill threshold
       creditDeficit: 0,
       isRefillMode: false
     })
