@@ -258,6 +258,192 @@ router.get('/master/my-profile/:userId', async (req, res) => {
   }
 })
 
+// ==================== MASTER ACCOUNT SWITCH ROUTES ====================
+
+// GET /api/copy/master/accounts/:userId - Get master's trading accounts for switching
+router.get('/master/accounts/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params
+
+    // Find master profile
+    const master = await MasterTrader.findOne({ userId })
+      .populate('tradingAccountId', 'accountId balance credit leverage status')
+    
+    if (!master) {
+      return res.status(404).json({ message: 'Master profile not found' })
+    }
+
+    if (master.status !== 'ACTIVE') {
+      return res.status(400).json({ message: 'Master account is not active' })
+    }
+
+    // Get all user's trading accounts (excluding copy trading and demo accounts)
+    const accounts = await TradingAccount.find({
+      userId,
+      isCopyTrading: { $ne: true },
+      isDemo: { $ne: true },
+      status: 'Active'
+    })
+      .populate('accountTypeId', 'name isDemo')
+      .select('accountId balance credit leverage status createdAt')
+      .sort({ createdAt: -1 })
+
+    // Filter out demo account types
+    const regularAccounts = accounts.filter(acc => !acc.accountTypeId?.isDemo)
+
+    // Mark which account is currently primary
+    const accountsWithPrimary = regularAccounts.map(acc => ({
+      _id: acc._id,
+      accountId: acc.accountId,
+      balance: acc.balance || 0,
+      credit: acc.credit || 0,
+      leverage: acc.leverage,
+      status: acc.status,
+      createdAt: acc.createdAt,
+      isPrimary: acc._id.toString() === master.tradingAccountId?._id?.toString() || 
+                 acc._id.toString() === master.tradingAccountId?.toString()
+    }))
+
+    res.json({
+      success: true,
+      accounts: accountsWithPrimary,
+      master: {
+        _id: master._id,
+        displayName: master.displayName,
+        status: master.status,
+        currentPrimaryAccountId: master.tradingAccountId?._id || master.tradingAccountId
+      },
+      switchHistory: master.accountSwitchHistory || []
+    })
+  } catch (error) {
+    console.error('Error fetching master accounts:', error)
+    res.status(500).json({ message: 'Error fetching accounts', error: error.message })
+  }
+})
+
+// PUT /api/copy/master/primary/:userId - Switch primary trading account for master
+router.put('/master/primary/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params
+    const { accountId, reason } = req.body
+
+    if (!accountId) {
+      return res.status(400).json({ message: 'Account ID is required' })
+    }
+
+    // Find master profile
+    const master = await MasterTrader.findOne({ userId })
+    if (!master) {
+      return res.status(404).json({ message: 'Master profile not found' })
+    }
+
+    if (master.status !== 'ACTIVE') {
+      return res.status(400).json({ message: 'Master account is not active' })
+    }
+
+    // Validate the new account
+    const newAccount = await TradingAccount.findById(accountId)
+      .populate('accountTypeId', 'name isDemo')
+    
+    if (!newAccount) {
+      return res.status(404).json({ message: 'Trading account not found' })
+    }
+
+    // Verify account belongs to the user
+    if (newAccount.userId.toString() !== userId) {
+      return res.status(403).json({ message: 'Account does not belong to you' })
+    }
+
+    // Cannot use copy trading account as primary
+    if (newAccount.isCopyTrading) {
+      return res.status(400).json({ message: 'Cannot use a Copy Trading account as primary. Please select a regular trading account.' })
+    }
+
+    // Cannot use demo account as primary
+    if (newAccount.isDemo || newAccount.accountTypeId?.isDemo) {
+      return res.status(400).json({ message: 'Cannot use a Demo account as primary. Please select a regular trading account.' })
+    }
+
+    // Check if account is active
+    if (newAccount.status !== 'Active') {
+      return res.status(400).json({ message: 'Account is not active' })
+    }
+
+    // Check if already primary
+    const currentPrimaryId = master.tradingAccountId?.toString()
+    if (currentPrimaryId === accountId) {
+      return res.status(400).json({ message: 'This account is already your primary trading account' })
+    }
+
+    // Store previous account ID for history
+    const previousAccountId = master.tradingAccountId
+
+    // Update primary account
+    master.tradingAccountId = accountId
+
+    // Add to switch history
+    if (!master.accountSwitchHistory) {
+      master.accountSwitchHistory = []
+    }
+    master.accountSwitchHistory.push({
+      fromAccountId: previousAccountId,
+      toAccountId: accountId,
+      reason: reason || 'Manual switch by master',
+      switchedAt: new Date()
+    })
+
+    await master.save()
+
+    // Get updated account info
+    const updatedAccount = await TradingAccount.findById(accountId)
+      .select('accountId balance credit leverage')
+
+    res.json({
+      success: true,
+      message: 'Primary trading account switched successfully. All future trades from this account will be copied to your followers.',
+      master: {
+        _id: master._id,
+        displayName: master.displayName,
+        newPrimaryAccountId: accountId,
+        previousPrimaryAccountId: previousAccountId
+      },
+      newPrimaryAccount: {
+        _id: updatedAccount._id,
+        accountId: updatedAccount.accountId,
+        balance: updatedAccount.balance,
+        credit: updatedAccount.credit
+      }
+    })
+  } catch (error) {
+    console.error('Error switching primary account:', error)
+    res.status(500).json({ message: 'Error switching account', error: error.message })
+  }
+})
+
+// GET /api/copy/master/switch-history/:userId - Get account switch history
+router.get('/master/switch-history/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params
+
+    const master = await MasterTrader.findOne({ userId })
+      .populate('accountSwitchHistory.fromAccountId', 'accountId')
+      .populate('accountSwitchHistory.toAccountId', 'accountId')
+
+    if (!master) {
+      return res.status(404).json({ message: 'Master profile not found' })
+    }
+
+    res.json({
+      success: true,
+      switchHistory: master.accountSwitchHistory || [],
+      totalSwitches: master.accountSwitchHistory?.length || 0
+    })
+  } catch (error) {
+    console.error('Error fetching switch history:', error)
+    res.status(500).json({ message: 'Error fetching switch history', error: error.message })
+  }
+})
+
 // POST /api/copy/master/withdraw - Request commission withdrawal
 router.post('/master/withdraw', async (req, res) => {
   try {

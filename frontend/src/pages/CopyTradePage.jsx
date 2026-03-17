@@ -9,6 +9,7 @@ import { useTheme } from '../context/ThemeContext'
 import logo from '../assets/logo.png'
 
 import { API_URL } from '../config/api'
+import AccountSwitcher from '../components/master/AccountSwitcher.jsx'
 
 const CopyTradePage = () => {
   const navigate = useNavigate()
@@ -724,7 +725,7 @@ const CopyTradePage = () => {
 
           {/* Tabs - Scrollable on mobile */}
           <div className={`flex ${isMobile ? 'gap-2 overflow-x-auto pb-2' : 'gap-4'} mb-4`}>
-            {['discover', 'subscriptions', 'trades', ...(myMasterProfile?.status === 'ACTIVE' ? ['my-followers', 'commissions'] : [])].map(tab => (
+            {['discover', 'subscriptions', 'trades', ...(myMasterProfile?.status === 'ACTIVE' ? ['my-followers', 'commissions', 'account-switch'] : [])].map(tab => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -735,7 +736,8 @@ const CopyTradePage = () => {
                 {tab === 'discover' ? 'Discover' : 
                  tab === 'subscriptions' ? 'Subscriptions' : 
                  tab === 'trades' ? 'Trades' : 
-                 tab === 'my-followers' ? 'Followers' : 'Commissions'}
+                 tab === 'my-followers' ? 'Followers' : 
+                 tab === 'commissions' ? 'Commissions' : 'Switch Account'}
               </button>
             ))}
           </div>
@@ -1619,6 +1621,11 @@ const CopyTradePage = () => {
                 </ul>
               </div>
             </div>
+          )}
+
+          {/* Account Switch Tab (for Master Traders) */}
+          {activeTab === 'account-switch' && myMasterProfile?.status === 'ACTIVE' && (
+            <AccountSwitcher userId={user._id} isDarkMode={isDarkMode} />
           )}
         </div>
       </main>

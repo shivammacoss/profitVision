@@ -112,7 +112,26 @@ const masterTraderSchema = new mongoose.Schema({
   rejectionReason: {
     type: String,
     default: null
-  }
+  },
+  // Account switch history - tracks when master switches primary trading account
+  accountSwitchHistory: [{
+    fromAccountId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'TradingAccount'
+    },
+    toAccountId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'TradingAccount'
+    },
+    reason: {
+      type: String,
+      default: ''
+    },
+    switchedAt: {
+      type: Date,
+      default: Date.now
+    }
+  }]
 }, { timestamps: true })
 
 // Index for efficient queries

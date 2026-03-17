@@ -76,6 +76,8 @@ const Account = () => {
   const [success, setSuccess] = useState('')
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
   const [createAccountTab, setCreateAccountTab] = useState('live')
+  const [myMasterProfile, setMyMasterProfile] = useState(null)
+  const [switchingPrimary, setSwitchingPrimary] = useState(false)
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768)
@@ -116,10 +118,48 @@ const Account = () => {
       fetchUserAccounts()
       fetchWalletBalance()
       fetchChallengeAccounts()
+      fetchMyMasterProfile()
     } else {
       setLoading(false)
     }
   }, [user._id])
+
+  const fetchMyMasterProfile = async () => {
+    try {
+      const res = await fetch(`${API_URL}/copy/master/my-profile/${user._id}`)
+      const data = await res.json()
+      if (res.ok) {
+        setMyMasterProfile(data.master)
+      }
+    } catch (error) {
+      console.error('Error fetching master profile:', error)
+    }
+  }
+
+  const handleMakePrimary = async (accountId) => {
+    setSwitchingPrimary(true)
+    try {
+      const res = await fetch(`${API_URL}/copy/master/primary/${user._id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accountId, reason: 'Switched from Account page' })
+      })
+      const data = await res.json()
+      if (res.ok) {
+        setSuccess('✅ Primary account switched! Trades from this account will now be copied to followers.')
+        fetchMyMasterProfile()
+        setTimeout(() => setSuccess(''), 5000)
+      } else {
+        setError(data.message || 'Failed to switch primary account')
+        setTimeout(() => setError(''), 5000)
+      }
+    } catch (error) {
+      setError('Network error. Please try again.')
+      setTimeout(() => setError(''), 5000)
+    }
+    setSwitchingPrimary(false)
+    setShowAccountMenu(null)
+  }
 
   const fetchChallengeStatus = async () => {
     try {
@@ -862,16 +902,46 @@ const Account = () => {
                                 </button>
                               </>
                             ) : (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  setShowAccountMenu(null)
-                                  setShowArchiveConfirm(account)
-                                }}
-                                className="w-full px-4 py-2 text-left text-sm text-red-400 hover:bg-dark-600 rounded-lg flex items-center gap-2"
-                              >
-                                <X size={14} /> Archive Account
-                              </button>
+                              <>
+                                {/* Make Primary for Copy Trading - only for active masters */}
+                                {myMasterProfile?.status === 'ACTIVE' && 
+                                 !account.isCopyTrading && 
+                                 !account.isDemo && 
+                                 !account.accountTypeId?.isDemo &&
+                                 account.status === 'Active' &&
+                                 myMasterProfile.tradingAccountId?.toString() !== account._id?.toString() &&
+                                 myMasterProfile.tradingAccountId !== account._id && (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      handleMakePrimary(account._id)
+                                    }}
+                                    disabled={switchingPrimary}
+                                    className="w-full px-4 py-2 text-left text-sm text-green-400 hover:bg-dark-600 flex items-center gap-2 border-b border-gray-600"
+                                  >
+                                    <Check size={14} /> {switchingPrimary ? 'Switching...' : 'Make Primary (Copy Trade)'}
+                                  </button>
+                                )}
+                                {/* Show if this is current primary */}
+                                {myMasterProfile?.status === 'ACTIVE' && 
+                                 !account.isCopyTrading && 
+                                 (myMasterProfile.tradingAccountId?.toString() === account._id?.toString() ||
+                                  myMasterProfile.tradingAccountId === account._id) && (
+                                  <div className="w-full px-4 py-2 text-left text-sm text-blue-400 flex items-center gap-2 border-b border-gray-600">
+                                    <Check size={14} /> ⭐ Current Primary
+                                  </div>
+                                )}
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    setShowAccountMenu(null)
+                                    setShowArchiveConfirm(account)
+                                  }}
+                                  className="w-full px-4 py-2 text-left text-sm text-red-400 hover:bg-dark-600 rounded-lg flex items-center gap-2"
+                                >
+                                  <X size={14} /> Archive Account
+                                </button>
+                              </>
                             )}
                           </div>
                         )}
