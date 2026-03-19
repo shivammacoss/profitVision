@@ -40,6 +40,7 @@ import AdminThemeSettings from './pages/AdminThemeSettings'
 import AdminBookManagement from './pages/AdminBookManagement'
 import AdminPaymentGateway from './pages/AdminPaymentGateway'
 import AdminEmailSender from './pages/AdminEmailSender'
+import AdminManualCrypto from './pages/AdminManualCrypto'
 import BrandedLogin from './pages/BrandedLogin'
 import BrandedSignup from './pages/BrandedSignup'
 import ChatBot from './components/ChatBot'
@@ -90,6 +91,7 @@ function App() {
         <Route path="/admin/book-management" element={<AdminBookManagement />} />
         <Route path="/admin/payment-gateway" element={<AdminPaymentGateway />} />
         <Route path="/admin/email" element={<AdminEmailSender />} />
+        <Route path="/admin/manual-crypto" element={<AdminManualCrypto />} />
         <Route path="/buy-challenge" element={<BuyChallengePage />} />
         <Route path="/challenge-dashboard" element={<ChallengeDashboardPage />} />
         <Route path="/:slug/login" element={<BrandedLogin />} />

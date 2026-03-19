@@ -35,6 +35,7 @@ import paymentGatewaySettingsRoutes from './routes/paymentGatewaySettings.js'
 import creditRoutes from './routes/credit.js'
 import ibModeRoutes from './routes/ibMode.js'
 import lpIntegrationRoutes, { getAllLpPrices } from './routes/lpIntegration.js'
+import manualCryptoRoutes from './routes/manualCrypto.js'
 import path from 'path'
 import { fileURLToPath } from 'url'
 
@@ -250,6 +251,7 @@ app.use('/api/payment-gateway', paymentGatewaySettingsRoutes)
 app.use('/api/credit', creditRoutes)
 app.use('/api/ib-mode', ibModeRoutes)
 app.use('/api/lp', lpIntegrationRoutes)
+app.use('/api/manual-crypto', manualCryptoRoutes)
 
 // Make io globally accessible for LP price updates
 global.io = io

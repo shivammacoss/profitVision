@@ -73,6 +73,14 @@ const WalletPage = () => {
   const [userBankAccounts, setUserBankAccounts] = useState([])
   const [selectedBankAccount, setSelectedBankAccount] = useState(null)
   const [showNoBankWarning, setShowNoBankWarning] = useState(false)
+  
+  // Manual Crypto States
+  const [cryptoPaymentType, setCryptoPaymentType] = useState('oxapay') // 'oxapay' or 'manual'
+  const [manualCryptoWallets, setManualCryptoWallets] = useState([])
+  const [selectedManualWallet, setSelectedManualWallet] = useState(null)
+  const [manualTxHash, setManualTxHash] = useState('')
+  const [manualCryptoLoading, setManualCryptoLoading] = useState(false)
+  const [feeComparison, setFeeComparison] = useState(null)
 
   const user = JSON.parse(localStorage.getItem('user') || '{}')
 
@@ -142,6 +150,7 @@ const WalletPage = () => {
     fetchPaymentMethods()
     fetchCurrencies()
     fetchPaymentGatewaySettings()
+    fetchManualCryptoWallets()
   }, [user._id])
 
   // Fetch user's saved bank accounts for withdrawal
@@ -249,6 +258,124 @@ const WalletPage = () => {
       setPaymentMethods(data.paymentMethods || [])
     } catch (error) {
       console.error('Error fetching payment methods:', error)
+    }
+  }
+
+  // Fetch manual crypto wallets
+  const fetchManualCryptoWallets = async () => {
+    try {
+      const res = await fetch(`${API_URL}/manual-crypto/wallets`)
+      const data = await res.json()
+      if (data.success) {
+        setManualCryptoWallets(data.wallets || [])
+      }
+    } catch (error) {
+      console.error('Error fetching manual crypto wallets:', error)
+    }
+  }
+
+  // Calculate fee comparison when amount changes
+  const calculateFeeComparison = (amount) => {
+    if (!amount || parseFloat(amount) <= 0) {
+      setFeeComparison(null)
+      return
+    }
+    const amt = parseFloat(amount)
+    const oxapayFee = amt * 0.015 // 1.5%
+    const manualFee = amt * 0.005 // 0.5%
+    setFeeComparison({
+      oxapay: {
+        fee: oxapayFee.toFixed(2),
+        total: (amt + oxapayFee).toFixed(2),
+        feePercent: 1.5
+      },
+      manual: {
+        fee: manualFee.toFixed(2),
+        total: (amt + manualFee).toFixed(2),
+        feePercent: 0.5
+      },
+      savings: (oxapayFee - manualFee).toFixed(2)
+    })
+  }
+
+  // Handle manual crypto deposit submission
+  const handleManualCryptoDeposit = async () => {
+    if (!user._id) {
+      setError('Please login to make a deposit')
+      return
+    }
+    if (!cryptoAmount || parseFloat(cryptoAmount) < 10) {
+      setError('Minimum deposit is $10')
+      return
+    }
+    if (!selectedManualWallet) {
+      setError('Please select a wallet')
+      return
+    }
+    if (!manualTxHash || manualTxHash.trim() === '') {
+      setError('Transaction hash is required')
+      return
+    }
+
+    setManualCryptoLoading(true)
+    setError('')
+
+    try {
+      const token = localStorage.getItem('token')
+      
+      // Upload screenshot first if provided
+      let screenshotUrl = null
+      if (screenshot) {
+        const formData = new FormData()
+        formData.append('screenshot', screenshot)
+        formData.append('userId', user._id)
+        
+        const uploadRes = await fetch(`${API_URL}/upload/screenshot`, {
+          method: 'POST',
+          body: formData
+        })
+        const uploadData = await uploadRes.json()
+        if (uploadData.success) {
+          screenshotUrl = uploadData.url
+        }
+      }
+      
+      const res = await fetch(`${API_URL}/manual-crypto/submit-deposit`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          walletId: selectedManualWallet._id,
+          amount: parseFloat(cryptoAmount),
+          txHash: manualTxHash.trim(),
+          screenshotUrl: screenshotUrl || screenshotPreview
+        })
+      })
+      const data = await res.json()
+
+      if (data.success) {
+        setSuccess('Deposit request submitted! Admin will verify your transaction.')
+        setShowDepositModal(false)
+        setShowCryptoDeposit(false)
+        setCryptoAmount('')
+        setManualTxHash('')
+        setSelectedManualWallet(null)
+        setCryptoPaymentType('oxapay')
+        setScreenshot(null)
+        setScreenshotPreview(null)
+        fetchWallet()
+        fetchTransactions()
+        setTimeout(() => setSuccess(''), 5000)
+      } else {
+        setError(data.message || 'Failed to submit deposit')
+      }
+    } catch (error) {
+      console.error('Manual crypto deposit error:', error)
+      setError('Error submitting deposit. Please try again.')
+    } finally {
+      setManualCryptoLoading(false)
     }
   }
 
@@ -785,44 +912,257 @@ const WalletPage = () => {
             )}
 
             {/* Crypto Deposit Section */}
-            {showCryptoDeposit && paymentGatewaySettings?.oxapayEnabled ? (
+            {showCryptoDeposit && (paymentGatewaySettings?.oxapayEnabled || manualCryptoWallets.length > 0) ? (
               <div className="space-y-4">
-                <div className={`p-4 rounded-lg ${isDarkMode ? 'bg-orange-500/10 border-orange-500/30' : 'bg-orange-50 border-orange-200'} border`}>
-                  <p className={`text-sm ${isDarkMode ? 'text-orange-400' : 'text-orange-600'}`}>
-                    Pay with Bitcoin, Ethereum, USDT, and 100+ cryptocurrencies via OxaPay
-                  </p>
-                </div>
+                {/* Crypto Payment Type Selection */}
+                {paymentGatewaySettings?.oxapayEnabled && manualCryptoWallets.length > 0 && (
+                  <div>
+                    <label className="block text-gray-500 text-sm mb-2">Choose Payment Method</label>
+                    <div className="grid grid-cols-2 gap-3">
+                      <button
+                        onClick={() => setCryptoPaymentType('oxapay')}
+                        className={`p-3 rounded-lg border transition-colors ${
+                          cryptoPaymentType === 'oxapay'
+                            ? 'border-orange-500 bg-orange-500/10'
+                            : isDarkMode ? 'border-gray-700 hover:border-gray-600' : 'border-gray-300 hover:border-gray-400'
+                        }`}
+                      >
+                        <div className="text-center">
+                          <p className={`font-medium ${cryptoPaymentType === 'oxapay' ? 'text-orange-500' : isDarkMode ? 'text-white' : 'text-gray-900'}`}>OxaPay Gateway</p>
+                          <p className="text-red-400 text-xs mt-1">Fee: 1.5%</p>
+                          <p className="text-gray-500 text-xs">Auto-verify</p>
+                        </div>
+                      </button>
+                      <button
+                        onClick={() => setCryptoPaymentType('manual')}
+                        className={`p-3 rounded-lg border transition-colors ${
+                          cryptoPaymentType === 'manual'
+                            ? 'border-green-500 bg-green-500/10'
+                            : isDarkMode ? 'border-gray-700 hover:border-gray-600' : 'border-gray-300 hover:border-gray-400'
+                        }`}
+                      >
+                        <div className="text-center">
+                          <p className={`font-medium ${cryptoPaymentType === 'manual' ? 'text-green-500' : isDarkMode ? 'text-white' : 'text-gray-900'}`}>Direct Transfer</p>
+                          <p className="text-green-400 text-xs mt-1">Fee: 0.5%</p>
+                          <p className="text-gray-500 text-xs">Manual verify</p>
+                        </div>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Amount Input */}
                 <div>
                   <label className="block text-gray-500 text-sm mb-2">Amount (USD)</label>
                   <input
                     type="number"
                     value={cryptoAmount}
-                    onChange={(e) => setCryptoAmount(e.target.value)}
+                    onChange={(e) => {
+                      setCryptoAmount(e.target.value)
+                      calculateFeeComparison(e.target.value)
+                    }}
                     placeholder="Minimum $10"
                     min="10"
                     className={`w-full ${isDarkMode ? 'bg-dark-700 border-gray-700 text-white' : 'bg-gray-100 border-gray-300 text-gray-900'} border rounded-lg px-4 py-3 placeholder-gray-500 focus:outline-none focus:border-orange-500`}
                   />
                 </div>
-                {error && <p className="text-red-500 text-sm">{error}</p>}
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => {
-                      setShowDepositModal(false)
-                      setCryptoAmount('')
-                      setError('')
-                    }}
-                    className={`flex-1 py-3 rounded-lg font-medium ${isDarkMode ? 'bg-dark-700 text-white hover:bg-dark-600' : 'bg-gray-200 text-gray-800 hover:bg-gray-300'}`}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleCryptoDeposit}
-                    disabled={cryptoLoading || !cryptoAmount || parseFloat(cryptoAmount) < 10}
-                    className="flex-1 bg-orange-500 text-white font-medium py-3 rounded-lg hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                  >
-                    {cryptoLoading ? 'Processing...' : 'Pay with Crypto'}
-                  </button>
-                </div>
+
+                {/* Fee Comparison Box */}
+                {feeComparison && (
+                  <div className={`p-3 rounded-lg ${isDarkMode ? 'bg-dark-700' : 'bg-gray-100'}`}>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div className={`p-2 rounded ${cryptoPaymentType === 'oxapay' ? 'bg-orange-500/20 border border-orange-500/30' : ''}`}>
+                        <p className="text-gray-500">OxaPay (1.5%)</p>
+                        <p className={isDarkMode ? 'text-white' : 'text-gray-900'}>Fee: <span className="text-red-400">${feeComparison.oxapay.fee}</span></p>
+                        <p className={isDarkMode ? 'text-white' : 'text-gray-900'}>Total: ${feeComparison.oxapay.total}</p>
+                      </div>
+                      <div className={`p-2 rounded ${cryptoPaymentType === 'manual' ? 'bg-green-500/20 border border-green-500/30' : ''}`}>
+                        <p className="text-gray-500">Direct (0.5%)</p>
+                        <p className={isDarkMode ? 'text-white' : 'text-gray-900'}>Fee: <span className="text-green-400">${feeComparison.manual.fee}</span></p>
+                        <p className={isDarkMode ? 'text-white' : 'text-gray-900'}>Total: ${feeComparison.manual.total}</p>
+                      </div>
+                    </div>
+                    {cryptoPaymentType === 'manual' && parseFloat(feeComparison.savings) > 0 && (
+                      <p className="text-green-400 text-center text-sm mt-2">
+                        💰 You save ${feeComparison.savings} with Direct Transfer!
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* OxaPay Section */}
+                {cryptoPaymentType === 'oxapay' && paymentGatewaySettings?.oxapayEnabled && (
+                  <>
+                    <div className={`p-4 rounded-lg ${isDarkMode ? 'bg-orange-500/10 border-orange-500/30' : 'bg-orange-50 border-orange-200'} border`}>
+                      <p className={`text-sm ${isDarkMode ? 'text-orange-400' : 'text-orange-600'}`}>
+                        Pay with Bitcoin, Ethereum, USDT, and 100+ cryptocurrencies via OxaPay
+                      </p>
+                    </div>
+                    {error && <p className="text-red-500 text-sm">{error}</p>}
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() => {
+                          setShowDepositModal(false)
+                          setCryptoAmount('')
+                          setError('')
+                          setFeeComparison(null)
+                        }}
+                        className={`flex-1 py-3 rounded-lg font-medium ${isDarkMode ? 'bg-dark-700 text-white hover:bg-dark-600' : 'bg-gray-200 text-gray-800 hover:bg-gray-300'}`}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleCryptoDeposit}
+                        disabled={cryptoLoading || !cryptoAmount || parseFloat(cryptoAmount) < 10}
+                        className="flex-1 bg-orange-500 text-white font-medium py-3 rounded-lg hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                      >
+                        {cryptoLoading ? 'Processing...' : `Pay $${feeComparison?.oxapay.total || cryptoAmount}`}
+                      </button>
+                    </div>
+                  </>
+                )}
+
+                {/* Manual Crypto Section */}
+                {cryptoPaymentType === 'manual' && manualCryptoWallets.length > 0 && (
+                  <>
+                    {/* Wallet Selection */}
+                    <div>
+                      <label className="block text-gray-500 text-sm mb-2">Select Wallet</label>
+                      <div className="grid grid-cols-2 gap-2">
+                        {manualCryptoWallets.map(wallet => (
+                          <button
+                            key={wallet._id}
+                            onClick={() => setSelectedManualWallet(wallet)}
+                            className={`p-3 rounded-lg border text-left transition-colors ${
+                              selectedManualWallet?._id === wallet._id
+                                ? 'border-green-500 bg-green-500/10'
+                                : isDarkMode ? 'border-gray-700 hover:border-gray-600' : 'border-gray-300 hover:border-gray-400'
+                            }`}
+                          >
+                            <p className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{wallet.currency}</p>
+                            <p className="text-gray-500 text-xs">{wallet.network}</p>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Selected Wallet Details */}
+                    {selectedManualWallet && (
+                      <div className={`p-4 rounded-lg ${isDarkMode ? 'bg-dark-700' : 'bg-gray-100'}`}>
+                        {/* QR Code */}
+                        {selectedManualWallet.qrCodeData && (
+                          <div className="flex justify-center mb-3">
+                            <img src={selectedManualWallet.qrCodeData} alt="QR Code" className="w-32 h-32 rounded-lg" />
+                          </div>
+                        )}
+                        {/* Address */}
+                        <div className="text-center">
+                          <p className="text-gray-500 text-sm mb-1">Send to this address:</p>
+                          <p className={`font-mono text-xs break-all ${isDarkMode ? 'text-white' : 'text-gray-900'} bg-black/20 p-2 rounded`}>
+                            {selectedManualWallet.address}
+                          </p>
+                          <button
+                            onClick={() => {
+                              navigator.clipboard.writeText(selectedManualWallet.address)
+                              setSuccess('Address copied!')
+                              setTimeout(() => setSuccess(''), 2000)
+                            }}
+                            className="mt-2 text-green-400 text-sm hover:underline"
+                          >
+                            📋 Copy Address
+                          </button>
+                        </div>
+                        {/* Amount to send */}
+                        {feeComparison && (
+                          <div className="mt-3 text-center">
+                            <p className="text-gray-500 text-sm">Amount to send:</p>
+                            <p className="text-2xl font-bold text-green-400">${feeComparison.manual.total}</p>
+                            <p className="text-gray-500 text-xs">({selectedManualWallet.currency} on {selectedManualWallet.network})</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Transaction Hash Input */}
+                    <div>
+                      <label className="block text-gray-500 text-sm mb-2">Transaction Hash <span className="text-red-500">*</span></label>
+                      <input
+                        type="text"
+                        value={manualTxHash}
+                        onChange={(e) => setManualTxHash(e.target.value)}
+                        placeholder="Enter your transaction hash (0x...)"
+                        className={`w-full ${isDarkMode ? 'bg-dark-700 border-gray-700 text-white' : 'bg-gray-100 border-gray-300 text-gray-900'} border rounded-lg px-4 py-3 placeholder-gray-500 focus:outline-none focus:border-green-500 font-mono text-sm`}
+                      />
+                    </div>
+
+                    {/* Screenshot Upload for Manual Crypto */}
+                    <div>
+                      <label className="block text-gray-500 text-sm mb-2">Payment Screenshot (Optional)</label>
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => {
+                            const file = e.target.files[0]
+                            if (file) {
+                              if (file.size > 5 * 1024 * 1024) {
+                                setError('Screenshot must be less than 5MB')
+                                return
+                              }
+                              setScreenshot(file)
+                              const reader = new FileReader()
+                              reader.onloadend = () => setScreenshotPreview(reader.result)
+                              reader.readAsDataURL(file)
+                            }
+                          }}
+                          className="hidden"
+                          id="manual-crypto-screenshot"
+                        />
+                        <label
+                          htmlFor="manual-crypto-screenshot"
+                          className={`flex items-center gap-2 px-4 py-2 rounded-lg cursor-pointer ${
+                            isDarkMode ? 'bg-dark-700 hover:bg-dark-600 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'
+                          }`}
+                        >
+                          <Upload size={18} />
+                          {screenshot ? 'Change Screenshot' : 'Upload Screenshot'}
+                        </label>
+                        {screenshotPreview && (
+                          <img src={screenshotPreview} alt="Preview" className="w-12 h-12 rounded object-cover" />
+                        )}
+                      </div>
+                    </div>
+
+                    {error && <p className="text-red-500 text-sm">{error}</p>}
+
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() => {
+                          setShowDepositModal(false)
+                          setCryptoAmount('')
+                          setManualTxHash('')
+                          setSelectedManualWallet(null)
+                          setError('')
+                          setFeeComparison(null)
+                        }}
+                        className={`flex-1 py-3 rounded-lg font-medium ${isDarkMode ? 'bg-dark-700 text-white hover:bg-dark-600' : 'bg-gray-200 text-gray-800 hover:bg-gray-300'}`}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleManualCryptoDeposit}
+                        disabled={manualCryptoLoading || !cryptoAmount || parseFloat(cryptoAmount) < 10 || !selectedManualWallet || !manualTxHash}
+                        className="flex-1 bg-green-500 text-white font-medium py-3 rounded-lg hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                      >
+                        {manualCryptoLoading ? 'Submitting...' : 'Submit Deposit'}
+                      </button>
+                    </div>
+
+                    <p className="text-gray-500 text-xs text-center">
+                      ⏱ Admin will verify your transaction within 24 hours
+                    </p>
+                  </>
+                )}
               </div>
             ) : (
               <>

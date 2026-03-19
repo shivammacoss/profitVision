@@ -59,6 +59,7 @@ const AdminLayout = ({ children, title, subtitle }) => {
     { name: 'Account Types', icon: CreditCard, path: '/admin/account-types', permission: 'canManageAccounts' },
     { name: 'Theme Settings', icon: Palette, path: '/admin/theme', permission: 'canManageTheme' },
     { name: 'Payment Gateway', icon: CreditCard, path: '/admin/payment-gateway', permission: 'canManageAdmins' },
+    { name: 'Manual Crypto', icon: Wallet, path: '/admin/manual-crypto', permission: 'canManageAdmins' },
     { name: 'Email Sender', icon: Mail, path: '/admin/email', permission: 'canManageAdmins' },
     { name: 'Admin Management', icon: Shield, path: '/admin/admin-management', permission: 'canManageAdmins' },
     { name: 'KYC Verification', icon: FileCheck, path: '/admin/kyc', permission: 'canManageKYC' },

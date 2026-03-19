@@ -444,6 +444,40 @@ const AdminFundManagement = () => {
                 </div>
               </div>
 
+              {/* Transaction Hash (for Manual Crypto) */}
+              {selectedTxn.paymentMethod === 'Manual Crypto' && selectedTxn.cryptoTxHash && (
+                <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+                  <h3 className="text-gray-900 dark:text-white font-semibold mb-3">Transaction Hash</h3>
+                  <div className="bg-gray-50 dark:bg-dark-700 rounded-lg p-4">
+                    <p className="text-gray-900 dark:text-white font-mono text-sm break-all">{selectedTxn.cryptoTxHash}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Payment Screenshot */}
+              {(selectedTxn.screenshotUrl || selectedTxn.screenshot) && (
+                <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+                  <h3 className="text-gray-900 dark:text-white font-semibold mb-3">Payment Screenshot</h3>
+                  <div className="bg-gray-50 dark:bg-dark-700 rounded-lg p-4">
+                    <img 
+                      src={
+                        (selectedTxn.screenshotUrl || selectedTxn.screenshot)?.startsWith('http') || (selectedTxn.screenshotUrl || selectedTxn.screenshot)?.startsWith('data:')
+                          ? (selectedTxn.screenshotUrl || selectedTxn.screenshot)
+                          : `${import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5001'}${selectedTxn.screenshotUrl || selectedTxn.screenshot}`
+                      }
+                      alt="Payment Screenshot" 
+                      className="w-full max-h-64 object-contain rounded-lg cursor-pointer"
+                      onClick={() => {
+                        const url = (selectedTxn.screenshotUrl || selectedTxn.screenshot)?.startsWith('http') || (selectedTxn.screenshotUrl || selectedTxn.screenshot)?.startsWith('data:')
+                          ? (selectedTxn.screenshotUrl || selectedTxn.screenshot)
+                          : `${import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5001'}${selectedTxn.screenshotUrl || selectedTxn.screenshot}`
+                        window.open(url, '_blank')
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+
               {/* Bank Details (for withdrawals) */}
               {selectedTxn.type?.toLowerCase() === 'withdrawal' && (
                 <div className="border-t border-gray-200 dark:border-gray-700 pt-4">

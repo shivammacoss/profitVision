@@ -22,7 +22,7 @@ const transactionSchema = new mongoose.Schema({
   },
   paymentMethod: {
     type: String,
-    enum: ['Bank Transfer', 'UPI', 'QR Code', 'Internal', 'System', 'Crypto', 'Crypto (OxaPay)'],
+    enum: ['Bank Transfer', 'UPI', 'QR Code', 'Internal', 'System', 'Crypto', 'Crypto (OxaPay)', 'Manual Crypto'],
     default: 'Internal'
   },
   // For internal transfers
@@ -144,6 +144,37 @@ const transactionSchema = new mongoose.Schema({
   webhookLogId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'OxaPayWebhookLog',
+    default: null
+  },
+  
+  // ========== MANUAL CRYPTO DEPOSIT FIELDS ==========
+  manualCryptoWalletId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'ManualCryptoWallet',
+    default: null
+  },
+  manualCryptoAddress: {
+    type: String,
+    default: null
+  },
+  screenshotUrl: {
+    type: String,
+    default: null
+  },
+  feePercentage: {
+    type: Number,
+    default: 0
+  },
+  feeAmount: {
+    type: Number,
+    default: 0
+  },
+  totalPaid: {
+    type: Number,
+    default: 0
+  },
+  submittedAt: {
+    type: Date,
     default: null
   },
   
