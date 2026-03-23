@@ -1,6 +1,8 @@
 # Dependencies
 node_modules/
 */node_modules/
+# Accidental npm at repo root (no root package.json)
+/package-lock.json
 
 # Environment files
 .env
