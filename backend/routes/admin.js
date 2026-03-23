@@ -84,8 +84,24 @@ router.post('/users/:id/deduct', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Insufficient wallet balance' })
     }
     
-    wallet.balance = (wallet.balance || 0) - parseFloat(amount)
+    const deductAmt = parseFloat(amount)
+    wallet.balance = (wallet.balance || 0) - deductAmt
     await wallet.save()
+
+    const Transaction = (await import('../models/Transaction.js')).default
+    const adminRef = req.adminId && /^[0-9a-fA-F]{24}$/.test(String(req.adminId)) ? req.adminId : undefined
+    await Transaction.create({
+      userId: req.params.id,
+      walletId: wallet._id,
+      type: 'Withdrawal',
+      amount: deductAmt,
+      paymentMethod: 'System',
+      status: 'Completed',
+      adminRemarks: (reason && String(reason).trim()) || 'Deducted by admin',
+      description: 'Admin wallet adjustment',
+      processedAt: new Date(),
+      ...(adminRef ? { processedBy: adminRef } : {})
+    })
     
     console.log(`[Admin] Deducted $${amount} from user ${user.email} wallet. New balance: $${wallet.balance}`)
     
@@ -121,8 +137,24 @@ router.post('/users/:id/add-fund', async (req, res) => {
     }
     
     const previousBalance = wallet.balance || 0
-    wallet.balance = previousBalance + parseFloat(amount)
+    const added = parseFloat(amount)
+    wallet.balance = previousBalance + added
     await wallet.save()
+
+    const Transaction = (await import('../models/Transaction.js')).default
+    const adminRef = req.adminId && /^[0-9a-fA-F]{24}$/.test(String(req.adminId)) ? req.adminId : undefined
+    await Transaction.create({
+      userId: req.params.id,
+      walletId: wallet._id,
+      type: 'Deposit',
+      amount: added,
+      paymentMethod: 'System',
+      status: 'Approved',
+      adminRemarks: (reason && String(reason).trim()) || 'Added by admin',
+      description: 'Admin wallet credit',
+      processedAt: new Date(),
+      ...(adminRef ? { processedBy: adminRef } : {})
+    })
     
     console.log(`[Admin] Added $${amount} to user ${user.email} wallet. Balance: $${previousBalance} -> $${wallet.balance}`)
     
@@ -131,7 +163,7 @@ router.post('/users/:id/add-fund', async (req, res) => {
       message: 'Funds added successfully',
       previousBalance,
       newBalance: wallet.balance,
-      amountAdded: parseFloat(amount)
+      amountAdded: added
     })
   } catch (error) {
     console.error('Error adding funds:', error)

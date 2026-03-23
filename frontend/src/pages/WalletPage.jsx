@@ -38,6 +38,15 @@ import logo from '../assets/logo.png'
 
 import { API_URL } from '../config/api'
 
+function displayTransactionMethod(tx) {
+  if (['Transfer_To_Account', 'Transfer_From_Account', 'Account_Transfer_Out', 'Account_Transfer_In'].includes(tx.type)) {
+    return 'Internal'
+  }
+  if (tx.description === 'Admin wallet credit') return 'Admin credit'
+  if (tx.description === 'Admin wallet adjustment') return 'Admin adjustment'
+  return tx.paymentMethod || '-'
+}
+
 const WalletPage = () => {
   const navigate = useNavigate()
   const { isDarkMode, toggleDarkMode } = useTheme()
@@ -119,7 +128,7 @@ const WalletPage = () => {
       new Date(tx.createdAt).toLocaleString(),
       tx.type,
       tx.amount.toFixed(2),
-      tx.paymentMethod || 'Internal',
+      displayTransactionMethod(tx),
       tx.status,
       tx.transactionRef || '-'
     ])
@@ -835,7 +844,7 @@ const WalletPage = () => {
                           {tx.type === 'Deposit' || tx.type === 'Transfer_From_Account' || tx.type === 'Account_Transfer_In' ? '+' : '-'}${tx.amount.toLocaleString()}
                         </td>
                         <td className="py-4 px-4 text-gray-400">
-                          {tx.type === 'Transfer_To_Account' || tx.type === 'Transfer_From_Account' || tx.type === 'Account_Transfer_Out' || tx.type === 'Account_Transfer_In' ? 'Internal' : tx.paymentMethod}
+                          {displayTransactionMethod(tx)}
                         </td>
                         <td className="py-4 px-4">
                           <div className="flex items-center gap-2">
