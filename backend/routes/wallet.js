@@ -8,6 +8,15 @@ import AdminWalletTransaction from '../models/AdminWalletTransaction.js'
 
 const router = express.Router()
 
+/** Resolve main wallet when older records omitted walletId (e.g. manual crypto). */
+async function getWalletForTransaction(transaction) {
+  if (transaction.walletId) {
+    const byId = await Wallet.findById(transaction.walletId)
+    if (byId) return byId
+  }
+  return Wallet.findOne({ userId: transaction.userId })
+}
+
 // GET /api/wallet/:userId - Get user wallet
 router.get('/:userId', async (req, res) => {
   try {
@@ -311,13 +320,27 @@ router.put('/transaction/:id/approve', async (req, res) => {
       return res.status(400).json({ message: 'Transaction already processed' })
     }
 
-    const wallet = await Wallet.findById(transaction.walletId)
+    if (transaction.type !== 'Deposit' && transaction.type !== 'Withdrawal') {
+      return res.status(400).json({ message: 'This transaction type cannot be approved from fund management' })
+    }
+
+    const wallet = await getWalletForTransaction(transaction)
+    if (!wallet) {
+      return res.status(404).json({ message: 'Wallet not found for this transaction' })
+    }
+    if (!transaction.walletId) {
+      transaction.walletId = wallet._id
+    }
 
     if (transaction.type === 'Deposit') {
-      wallet.balance += transaction.amount
-      wallet.pendingDeposits -= transaction.amount
+      wallet.balance = (wallet.balance || 0) + transaction.amount
+      wallet.pendingDeposits = Math.max(0, (wallet.pendingDeposits || 0) - transaction.amount)
+      if (transaction.paymentMethod === 'Manual Crypto') {
+        transaction.walletCredited = true
+        transaction.walletCreditedAt = new Date()
+      }
     } else {
-      wallet.pendingWithdrawals -= transaction.amount
+      wallet.pendingWithdrawals = Math.max(0, (wallet.pendingWithdrawals || 0) - transaction.amount)
     }
 
     transaction.status = 'Approved'
@@ -347,14 +370,24 @@ router.put('/transaction/:id/reject', async (req, res) => {
       return res.status(400).json({ message: 'Transaction already processed' })
     }
 
-    const wallet = await Wallet.findById(transaction.walletId)
+    if (transaction.type !== 'Deposit' && transaction.type !== 'Withdrawal') {
+      return res.status(400).json({ message: 'This transaction type cannot be rejected from fund management' })
+    }
+
+    const wallet = await getWalletForTransaction(transaction)
+    if (!wallet) {
+      return res.status(404).json({ message: 'Wallet not found for this transaction' })
+    }
+    if (!transaction.walletId) {
+      transaction.walletId = wallet._id
+    }
 
     if (transaction.type === 'Deposit') {
-      wallet.pendingDeposits -= transaction.amount
+      wallet.pendingDeposits = Math.max(0, (wallet.pendingDeposits || 0) - transaction.amount)
     } else {
       // Refund withdrawal amount
-      wallet.balance += transaction.amount
-      wallet.pendingWithdrawals -= transaction.amount
+      wallet.balance = (wallet.balance || 0) + transaction.amount
+      wallet.pendingWithdrawals = Math.max(0, (wallet.pendingWithdrawals || 0) - transaction.amount)
     }
 
     transaction.status = 'Rejected'

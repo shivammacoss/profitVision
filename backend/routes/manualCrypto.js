@@ -139,10 +139,17 @@ router.post('/submit-deposit', authenticateUser, async (req, res) => {
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' })
     }
+
+    // User's main wallet (required for fund-management approve flow)
+    let userWallet = await Wallet.findOne({ userId })
+    if (!userWallet) {
+      userWallet = await Wallet.create({ userId, balance: 0, pendingDeposits: 0 })
+    }
     
     // Create transaction record
     const transaction = await Transaction.create({
       userId,
+      walletId: userWallet._id,
       type: 'Deposit',
       amount: depositAmount,
       paymentMethod: 'Manual Crypto',
@@ -168,11 +175,6 @@ router.post('/submit-deposit', authenticateUser, async (req, res) => {
       submittedAt: new Date()
     })
     
-    // Add to pending deposits in wallet
-    let userWallet = await Wallet.findOne({ userId })
-    if (!userWallet) {
-      userWallet = await Wallet.create({ userId, balance: 0, pendingDeposits: 0 })
-    }
     userWallet.pendingDeposits = (userWallet.pendingDeposits || 0) + depositAmount
     await userWallet.save()
     

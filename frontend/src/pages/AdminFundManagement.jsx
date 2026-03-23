@@ -101,11 +101,11 @@ const AdminFundManagement = () => {
         alert('Transaction approved successfully!')
         fetchTransactions()
       } else {
-        alert(data.message || 'Error approving transaction')
+        alert(data.message || data.error || 'Error approving transaction')
       }
     } catch (error) {
       console.error('Error approving transaction:', error)
-      alert('Error approving transaction')
+      alert(error?.message || 'Error approving transaction')
     }
   }
 
