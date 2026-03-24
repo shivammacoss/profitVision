@@ -12,15 +12,15 @@ import MasterTrader from '../models/MasterTrader.js'
 const router = express.Router()
 
 // GET /api/admin/trade/all - Get all trades with pagination (for admin dashboard)
-// Only shows B-Book trades - A-Book trades are shown in Book Management
+// Shows both A-Book and B-Book trades
 router.get('/all', async (req, res) => {
   try {
     const { status, limit = 20, offset = 0 } = req.query
 
-    // Only show B-Book trades (or trades without bookType for backward compatibility)
+    // Show both A-Book and B-Book trades (or trades without bookType for backward compatibility)
     let query = {
       $and: [
-        { $or: [{ bookType: 'B' }, { bookType: { $exists: false } }, { bookType: null }] }
+        { $or: [{ bookType: 'A' }, { bookType: 'B' }, { bookType: { $exists: false } }, { bookType: null }] }
       ]
     }
     if (status) query.$and.push({ status })
