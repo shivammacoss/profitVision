@@ -51,14 +51,17 @@ export const ThemeProvider = ({ children }) => {
 
   const fetchTheme = async () => {
     try {
-      const res = await fetch(`${API_URL}/theme/active`)
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 3000)
+      const res = await fetch(`${API_URL}/theme/active`, { signal: controller.signal })
+      clearTimeout(timeoutId)
       const data = await res.json()
       if (data.success && data.theme) {
         setTheme(data.theme)
         applyTheme(data.theme.colors)
       }
     } catch (error) {
-      console.error('Error fetching theme:', error)
+      // Backend not available - silently use default theme
     }
     setLoading(false)
   }

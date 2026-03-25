@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ChevronLeft, ChevronRight, Menu, X, TrendingUp, Users, BookOpen, Award, Mail, Phone, MapPin, Send } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Menu, X, Mail, Phone, MapPin, Send, Shield, BookOpen, Users, TrendingUp, Star, CheckCircle, AlertTriangle, FileText, Lock } from 'lucide-react'
 import logo from '../assets/logo.png'
 
 const ProfitVisionLanding = () => {
@@ -11,6 +11,7 @@ const ProfitVisionLanding = () => {
   const [contactForm, setContactForm] = useState({ name: '', email: '', message: '' })
   const [contactLoading, setContactLoading] = useState(false)
   const [contactMessage, setContactMessage] = useState('')
+  const [legalModal, setLegalModal] = useState(null)
   const chartRef = useRef(null)
 
   useEffect(() => {
@@ -111,8 +112,8 @@ const ProfitVisionLanding = () => {
           </div>
 
           {/* Desktop Menu */}
-          <div className="hidden md:flex items-center gap-8">
-            {['About', 'Trading', 'Features', 'Career', 'Earning', 'Reviews', 'Contact'].map((item) => (
+          <div className="hidden md:flex items-center gap-6">
+            {['About', 'Services', 'Education', 'Referral', 'Career', 'Reviews', 'Contact'].map((item) => (
               <button
                 key={item}
                 onClick={() => scrollToSection(item.toLowerCase())}
@@ -150,7 +151,7 @@ const ProfitVisionLanding = () => {
         {/* Mobile Menu */}
         {mobileMenuOpen && (
           <div className="md:hidden bg-slate-950/95 border-t border-yellow-500/20 p-4 space-y-3">
-            {['About', 'Trading', 'Career', 'Earning', 'Reviews'].map((item) => (
+            {['About', 'Services', 'Education', 'Referral', 'Career', 'Reviews', 'Contact'].map((item) => (
               <button
                 key={item}
                 onClick={() => scrollToSection(item.toLowerCase())}
@@ -169,19 +170,37 @@ const ProfitVisionLanding = () => {
           <div className="grid md:grid-cols-2 gap-12 items-center">
             <div className="space-y-8 animate-fade-in-up">
               <div>
-                <div className="text-center md:text-left mb-6">
-                  <p className="text-xl font-semibold text-yellow-400 tracking-widest">WELCOME TO</p>
+                <div className="text-left mb-4">
+                  <p className="text-base font-semibold text-yellow-400 tracking-widest uppercase">Welcome to</p>
                 </div>
-                <h1 className="text-6xl md:text-7xl font-bold leading-tight mb-4">
+                <h1 className="text-6xl md:text-7xl font-bold leading-tight mb-6">
                   <span className="bg-gradient-to-r from-yellow-400 via-yellow-300 to-yellow-500 bg-clip-text text-transparent">
                     ProfitVision
                   </span>
                   <br />
                   <span className="text-white">FX</span>
                 </h1>
-                <p className="text-xl text-gray-300 leading-relaxed">
-                  Your trusted trading partner. We provide up-to-date analytics, effective strategies and useful tools for consistent profits.
+                <p className="text-2xl font-bold text-white mb-4">Trade Smarter. Grow Stronger. Scale Consistently.</p>
+                <p className="text-lg text-gray-300 leading-relaxed mb-4">
+                  At ProfitVision FX, we combine institutional-level trading strategies with advanced risk management to deliver a powerful trading experience.
                 </p>
+                <p className="text-gray-400 leading-relaxed">
+                  Whether you choose manual trading or automated copy trading, our ecosystem is designed to help you achieve consistent and controlled growth in the global financial markets.
+                </p>
+                <div className="flex gap-6 mt-4 pt-4 border-t border-yellow-500/20">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-yellow-400">🎯</div>
+                    <p className="text-xs text-gray-400 mt-1">Precision</p>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-yellow-400">⚖️</div>
+                    <p className="text-xs text-gray-400 mt-1">Discipline</p>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-yellow-400">📈</div>
+                    <p className="text-xs text-gray-400 mt-1">Performance</p>
+                  </div>
+                </div>
               </div>
 
               <div className="flex gap-4 pt-4">
@@ -200,22 +219,53 @@ const ProfitVisionLanding = () => {
               </div>
             </div>
 
-            {/* Hero Card */}
-            <div className="relative h-96 md:h-full min-h-96 animate-fade-in-up" style={{animationDelay: '0.2s'}}>
-              <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/20 to-blue-500/20 rounded-2xl blur-2xl"></div>
-              <div className="relative bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur border border-yellow-500/30 rounded-2xl p-8 h-full flex flex-col justify-center">
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
-                    <span className="text-green-400 font-semibold">Live Trading Active</span>
-                  </div>
-                  <div className="text-5xl font-bold bg-gradient-to-r from-yellow-400 to-blue-400 bg-clip-text text-transparent">
-                    +245%
-                  </div>
-                  <p className="text-gray-400">Year-to-Date Profit</p>
-                  <div className="pt-4 border-t border-yellow-500/20 space-y-2">
-                    <p className="text-sm text-gray-400">Active Traders</p>
-                    <p className="text-3xl font-bold text-blue-400">8,542+</p>
+            {/* Hero Right - Stats + Images */}
+            <div className="relative animate-fade-in-up space-y-4" style={{animationDelay: '0.2s'}}>
+              {/* Dollar/Gold Image Card */}
+              <div className="relative rounded-2xl overflow-hidden h-48 border border-yellow-500/30">
+                <img
+                  src="https://images.unsplash.com/photo-1640340434855-6084b1f4901c?w=800&h=400&fit=crop&q=80"
+                  alt="Trading chart"
+                  className="w-full h-full object-cover opacity-70"
+                  onError={(e) => { e.target.style.display='none' }}
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent"></div>
+                <div className="absolute bottom-4 left-4 flex items-center gap-3">
+                  <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
+                  <span className="text-green-400 font-semibold">Live Trading Active</span>
+                </div>
+              </div>
+              {/* Stats Grid */}
+              <div className="grid grid-cols-3 gap-4">
+                <div className="relative bg-gradient-to-br from-slate-800/60 to-slate-900/60 backdrop-blur border border-yellow-500/30 rounded-xl p-4 text-center">
+                  <div className="text-2xl mb-1">💰</div>
+                  <div className="text-xl font-bold text-yellow-400">+245%</div>
+                  <p className="text-xs text-gray-400">YTD Profit</p>
+                </div>
+                <div className="relative bg-gradient-to-br from-slate-800/60 to-slate-900/60 backdrop-blur border border-yellow-500/30 rounded-xl p-4 text-center">
+                  <div className="text-2xl mb-1">🏆</div>
+                  <div className="text-xl font-bold text-yellow-400">8.5K+</div>
+                  <p className="text-xs text-gray-400">Traders</p>
+                </div>
+                <div className="relative bg-gradient-to-br from-slate-800/60 to-slate-900/60 backdrop-blur border border-yellow-500/30 rounded-xl p-4 text-center">
+                  <div className="text-2xl mb-1">⭐</div>
+                  <div className="text-xl font-bold text-yellow-400">10+</div>
+                  <p className="text-xs text-gray-400">Years Exp.</p>
+                </div>
+              </div>
+              {/* Gold Image Card */}
+              <div className="relative rounded-2xl overflow-hidden h-36 border border-yellow-500/30">
+                <img
+                  src="https://images.unsplash.com/photo-1605792657660-596af9009e82?w=800&h=300&fit=crop&q=80"
+                  alt="Gold investment"
+                  className="w-full h-full object-cover opacity-60"
+                  onError={(e) => { e.target.style.display='none' }}
+                />
+                <div className="absolute inset-0 bg-gradient-to-r from-slate-950/80 to-transparent"></div>
+                <div className="absolute inset-0 flex items-center pl-6">
+                  <div>
+                    <p className="text-yellow-400 font-bold text-lg">$50M+</p>
+                    <p className="text-gray-300 text-sm">Trading Volume</p>
                   </div>
                 </div>
               </div>
@@ -227,50 +277,187 @@ const ProfitVisionLanding = () => {
       {/* About Section */}
       <section id="about" className="relative py-20 px-4 sm:px-6 lg:px-8 z-10">
         <div className="max-w-7xl mx-auto">
-          <div className="grid md:grid-cols-2 gap-12 items-center">
+          <div className="text-center mb-16">
+            <p className="text-yellow-400 font-semibold tracking-widest uppercase mb-2">Who We Are</p>
+            <h2 className="text-5xl font-bold">About <span className="text-yellow-400">ProfitVision FX</span></h2>
+          </div>
+          <div className="grid md:grid-cols-2 gap-12 items-start">
             <div className="space-y-6 animate-fade-in-up">
-              <h2 className="text-5xl font-bold">
-                About <span className="text-yellow-400">Profit Vision FX</span>
-              </h2>
-              <div className="space-y-4 text-gray-300 leading-relaxed">
-                <p>
-                  <span className="text-yellow-400 font-semibold">Registered in UK</span> and <span className="text-yellow-400 font-semibold">based in Dubai</span>, we are a team of professional traders and mentors.
-                </p>
-                <p>
-                  We use our expertise and knowledge to generate consistent profits <span className="text-yellow-400 font-semibold">daily, monthly, and yearly</span>.
-                </p>
-                <p>
-                  Our team has <span className="text-yellow-400 font-semibold">strong fundamentals and technical knowledge</span> applied during live trading.
-                </p>
-                <p>
-                  We're expanding globally to provide <span className="text-yellow-400 font-semibold">financial freedom opportunities</span> to clients worldwide.
-                </p>
-              </div>
-              <div className="pt-4 space-y-3">
-                {['UK Registered', 'Professional Team', 'Proven Track Record', 'Global Expansion'].map((item, i) => (
-                  <div key={i} className="flex items-center gap-3">
-                    <div className="w-2 h-2 bg-gradient-to-r from-yellow-400 to-blue-400 rounded-full"></div>
-                    <span className="text-gray-300">{item}</span>
+              <p className="text-gray-300 leading-relaxed text-lg">
+                <span className="text-yellow-400 font-semibold">ProfitVision FX</span> is a performance-driven forex trading solutions provider committed to delivering <span className="text-yellow-400">consistency, transparency,</span> and long-term value.
+              </p>
+              <p className="text-gray-400 leading-relaxed">
+                Our team includes professional traders, quantitative analysts, and risk management experts who operate with a disciplined and data-backed approach.
+              </p>
+              <p className="text-gray-400 leading-relaxed">We don't believe in shortcuts or unrealistic promises. Instead, we focus on:</p>
+              <div className="space-y-3">
+                {[
+                  { icon: '🏗️', text: 'Structured trading systems' },
+                  { icon: '🛡️', text: 'Strict risk control' },
+                  { icon: '📊', text: 'Sustainable profit models' }
+                ].map((item, i) => (
+                  <div key={i} className="flex items-center gap-3 bg-yellow-500/5 border border-yellow-500/20 rounded-lg px-4 py-3">
+                    <span className="text-xl">{item.icon}</span>
+                    <span className="text-gray-200 font-medium">{item.text}</span>
                   </div>
                 ))}
               </div>
             </div>
+            <div className="space-y-6 animate-fade-in-up" style={{animationDelay: '0.2s'}}>
+              <div className="relative bg-gradient-to-br from-yellow-500/10 to-blue-500/5 border border-yellow-500/30 rounded-2xl p-6">
+                <h3 className="text-xl font-bold text-yellow-400 mb-3 flex items-center gap-2"><Star size={18}/> Our Vision</h3>
+                <p className="text-gray-300">To become a globally trusted trading ecosystem where traders can grow with confidence.</p>
+              </div>
+              <div className="relative bg-gradient-to-br from-blue-500/10 to-yellow-500/5 border border-blue-500/30 rounded-2xl p-6">
+                <h3 className="text-xl font-bold text-blue-400 mb-3 flex items-center gap-2"><TrendingUp size={18}/> Our Mission</h3>
+                <p className="text-gray-300">To simplify trading while maintaining professional standards and disciplined execution.</p>
+              </div>
+              <div className="grid grid-cols-3 gap-4">
+                {[
+                  { val: '10+', label: 'Years Exp.' },
+                  { val: '5000+', label: 'Traders' },
+                  { val: '$50M+', label: 'Volume' }
+                ].map((stat, i) => (
+                  <div key={i} className="bg-gradient-to-br from-slate-800/60 to-slate-900/60 border border-yellow-500/20 rounded-xl p-4 text-center">
+                    <div className="text-2xl font-bold text-yellow-400">{stat.val}</div>
+                    <p className="text-xs text-gray-400 mt-1">{stat.label}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
 
-            <div className="relative h-96 md:h-full min-h-96 animate-fade-in-up" style={{animationDelay: '0.2s'}}>
-              <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/20 to-blue-500/20 rounded-2xl blur-2xl"></div>
-              <div className="relative bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur border border-yellow-500/30 rounded-2xl p-8 h-full flex flex-col justify-center">
-                <div className="space-y-6">
-                  <div className="text-center">
-                    <div className="text-5xl font-bold text-yellow-400 mb-2">10+</div>
-                    <p className="text-gray-400">Years Experience</p>
+      {/* Services Section */}
+      <section id="services" className="relative py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-transparent via-blue-900/10 to-transparent z-10">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-16 animate-fade-in-up">
+            <p className="text-yellow-400 font-semibold tracking-widest uppercase mb-2">What We Offer</p>
+            <h2 className="text-5xl font-bold mb-2">
+              Our <span className="text-yellow-400">Services</span>
+            </h2>
+          </div>
+
+          {/* Manual Trading Signals */}
+          <div className="grid md:grid-cols-2 gap-12 mb-16 items-center">
+            <div className="animate-fade-in-up">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-3 bg-yellow-500/20 rounded-xl"><TrendingUp className="text-yellow-400" size={28}/></div>
+                <h3 className="text-3xl font-bold">Manual Trading <span className="text-yellow-400">Signals</span></h3>
+              </div>
+              <p className="text-gray-400 mb-6">Receive high-probability trade setups based on:</p>
+              <div className="space-y-3 mb-6">
+                {[
+                  'Multi-timeframe analysis',
+                  'Liquidity zones & institutional levels',
+                  'Price action confirmations (Pin bar, Engulfing, etc.)',
+                  'RSI & momentum confluence'
+                ].map((item, i) => (
+                  <div key={i} className="flex items-center gap-3">
+                    <CheckCircle className="text-yellow-400 flex-shrink-0" size={16}/>
+                    <span className="text-gray-300">{item}</span>
                   </div>
-                  <div className="border-t border-yellow-500/20 pt-6 text-center">
-                    <div className="text-5xl font-bold text-yellow-400 mb-2">5000+</div>
-                    <p className="text-gray-400">Active Traders</p>
+                ))}
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                {['Clear Entry, SL, TP', 'Intraday + Swing', 'Risk-managed'].map((tag, i) => (
+                  <div key={i} className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg px-3 py-2 text-center text-xs text-yellow-300 font-semibold">✔ {tag}</div>
+                ))}
+              </div>
+            </div>
+            <div className="relative animate-fade-in-up" style={{animationDelay:'0.2s'}}>
+              <div className="absolute inset-0 bg-yellow-500/10 rounded-2xl blur-2xl"></div>
+              <div className="relative rounded-2xl overflow-hidden border border-yellow-500/30 h-72">
+                <img src="https://images.unsplash.com/photo-1535320903710-d993d3d77d29?w=700&h=400&fit=crop&q=80" alt="Manual Trading" className="w-full h-full object-cover opacity-70" onError={(e) => e.target.style.display='none'}/>
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent"></div>
+              </div>
+            </div>
+          </div>
+
+          {/* Copy Trading */}
+          <div className="grid md:grid-cols-2 gap-12 items-center">
+            <div className="relative animate-fade-in-up order-2 md:order-1">
+              <div className="absolute inset-0 bg-blue-500/10 rounded-2xl blur-2xl"></div>
+              <div className="relative rounded-2xl overflow-hidden border border-blue-500/30 h-72">
+                <img src="https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=700&h=400&fit=crop&q=80" alt="Copy Trading" className="w-full h-full object-cover opacity-70" onError={(e) => e.target.style.display='none'}/>
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent"></div>
+              </div>
+            </div>
+            <div className="animate-fade-in-up order-1 md:order-2" style={{animationDelay:'0.2s'}}>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-3 bg-blue-500/20 rounded-xl"><Users className="text-blue-400" size={28}/></div>
+                <h3 className="text-3xl font-bold">Copy Trading <span className="text-blue-400">System</span></h3>
+              </div>
+              <p className="text-gray-300 mb-4 font-medium">Automated Wealth System — mirror trades from our master account in real-time.</p>
+              <p className="text-gray-400 mb-6">Why Choose Our Copy Trading?</p>
+              <div className="space-y-3">
+                {[
+                  'Fully automated execution',
+                  'Lot size proportional to your equity',
+                  'Transparent performance tracking',
+                  'Designed for consistency, not gambling'
+                ].map((item, i) => (
+                  <div key={i} className="flex items-center gap-3">
+                    <CheckCircle className="text-blue-400 flex-shrink-0" size={16}/>
+                    <span className="text-gray-300">{item}</span>
                   </div>
-                  <div className="border-t border-yellow-500/20 pt-6 text-center">
-                    <div className="text-5xl font-bold text-yellow-400 mb-2">$50M+</div>
-                    <p className="text-gray-400">Trading Volume</p>
+                ))}
+              </div>
+              <p className="mt-4 text-sm text-blue-300 italic">👉 Ideal for investors who want passive participation in forex markets.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Education System Section */}
+      <section id="education" className="relative py-20 px-4 sm:px-6 lg:px-8 z-10">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-16 animate-fade-in-up">
+            <p className="text-yellow-400 font-semibold tracking-widest uppercase mb-2">Grow Your Knowledge</p>
+            <h2 className="text-5xl font-bold mb-2">Education <span className="text-yellow-400">System</span></h2>
+            <p className="text-gray-400">Learn Like a Professional Trader</p>
+          </div>
+          <div className="grid md:grid-cols-2 gap-12 items-center">
+            <div className="animate-fade-in-up space-y-4">
+              <p className="text-gray-300">Our education system is designed to take you from beginner to advanced level with real market understanding.</p>
+              <div className="space-y-3">
+                {[
+                  { icon: '📐', title: 'Market Structure & Price Action' },
+                  { icon: '🎯', title: 'Support & Resistance Mastery' },
+                  { icon: '💡', title: 'Liquidity & Smart Money Concepts' },
+                  { icon: '🛡️', title: 'Risk Management (1% Rule, Capital Protection)' },
+                  { icon: '🧠', title: 'Trading Psychology & Discipline' }
+                ].map((item, i) => (
+                  <div key={i} className="flex items-center gap-4 bg-slate-800/40 border border-yellow-500/20 rounded-xl px-5 py-3 hover:border-yellow-500/50 transition-all">
+                    <span className="text-2xl">{item.icon}</span>
+                    <span className="text-gray-200 font-medium">{item.title}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="animate-fade-in-up space-y-4" style={{animationDelay:'0.2s'}}>
+              <div className="relative bg-gradient-to-br from-yellow-500/10 to-transparent border border-yellow-500/30 rounded-2xl p-6">
+                <h3 className="text-xl font-bold text-yellow-400 mb-4 flex items-center gap-2"><BookOpen size={20}/> Additional Features</h3>
+                <div className="space-y-3">
+                  {[
+                    { icon: '🎥', text: 'Live Trading Sessions' },
+                    { icon: '📊', text: 'Real-time Market Breakdown' },
+                    { icon: '🗺️', text: 'Strategy Development Guidance' }
+                  ].map((item, i) => (
+                    <div key={i} className="flex items-center gap-3">
+                      <span className="text-xl">{item.icon}</span>
+                      <span className="text-gray-300">{item.text}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="relative rounded-2xl overflow-hidden h-40 border border-yellow-500/20">
+                <img src="https://images.unsplash.com/photo-1501504905252-473c47e087f8?w=600&h=300&fit=crop&q=80" alt="Education" className="w-full h-full object-cover opacity-50" onError={(e) => e.target.style.display='none'}/>
+                <div className="absolute inset-0 bg-gradient-to-r from-slate-950/90 to-transparent flex items-center pl-6">
+                  <div>
+                    <p className="text-yellow-400 font-bold text-lg">Beginner → Advanced</p>
+                    <p className="text-gray-400 text-sm">Structured Learning Path</p>
                   </div>
                 </div>
               </div>
@@ -279,74 +466,59 @@ const ProfitVisionLanding = () => {
         </div>
       </section>
 
-      {/* Trading Features Section */}
-      <section id="features" className="relative py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-transparent via-blue-900/10 to-transparent z-10">
+      {/* Referral Program Section */}
+      <section id="referral" className="relative py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-transparent via-yellow-900/5 to-transparent z-10">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16 animate-fade-in-up">
-            <h2 className="text-5xl font-bold mb-2">
-              Advanced Trading <span className="text-yellow-400">Features</span>
-            </h2>
-            <p className="text-gray-400 text-lg">Everything you need for successful trading</p>
+            <p className="text-yellow-400 font-semibold tracking-widest uppercase mb-2">Earn More</p>
+            <h2 className="text-5xl font-bold mb-2">Referral <span className="text-yellow-400">Program</span></h2>
+            <p className="text-gray-400">Turn Your Network into Income</p>
           </div>
-
-          <div className="grid md:grid-cols-3 gap-8">
-            {[
-              {
-                title: 'Real-time Analytics',
-                description: 'Live market data, advanced charts, and technical indicators',
-                icon: '📊',
-                image: 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=500&h=300&fit=crop'
-              },
-              {
-                title: 'Risk Management',
-                description: 'Stop loss, take profit, and position sizing tools',
-                icon: '🛡️',
-                image: 'https://images.unsplash.com/photo-1633356122544-f134324ef6db?w=500&h=300&fit=crop'
-              },
-              {
-                title: '24/7 Support',
-                description: 'Expert support team available round the clock',
-                icon: '💬',
-                image: 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=500&h=300&fit=crop'
-              },
-              {
-                title: 'Mobile Trading',
-                description: 'Trade on the go with our mobile app',
-                icon: '📱',
-                image: 'https://images.unsplash.com/photo-1556656793-08538906a9f8?w=500&h=300&fit=crop'
-              },
-              {
-                title: 'Educational Resources',
-                description: 'Webinars, tutorials, and trading guides',
-                icon: '📚',
-                image: 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=500&h=300&fit=crop'
-              },
-              {
-                title: 'Secure Platform',
-                description: 'Bank-level security and encryption',
-                icon: '🔒',
-                image: 'https://images.unsplash.com/photo-1633356122544-f134324ef6db?w=500&h=300&fit=crop'
-              }
-            ].map((feature, i) => (
-              <div key={i} className="group relative animate-fade-in-up" style={{animationDelay: `${i * 0.1}s`}}>
-                <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/20 to-blue-500/20 rounded-2xl blur-xl group-hover:blur-2xl transition-all duration-300 opacity-0 group-hover:opacity-100"></div>
-                <div className="relative bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur border border-yellow-500/30 rounded-2xl overflow-hidden hover:border-yellow-500/60 transition-all duration-300">
-                  <div className="h-32 bg-gradient-to-br from-yellow-500/10 to-blue-500/10 overflow-hidden">
-                    <img 
-                      src={feature.image} 
-                      alt={feature.title}
-                      className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity duration-300"
-                      onError={(e) => e.target.style.display = 'none'}
-                    />
+          <div className="grid md:grid-cols-2 gap-12 items-center">
+            <div className="animate-fade-in-up">
+              <p className="text-gray-300 mb-6 text-lg">Join our high-reward referral program and earn commissions by introducing clients to ProfitVision FX.</p>
+              <div className="space-y-4">
+                {[
+                  { icon: '💎', title: 'Attractive Commission Structure', desc: 'Earn competitive commissions on every successful referral' },
+                  { icon: '📡', title: 'Real-time Tracking', desc: 'Monitor your referrals and earnings in real-time' },
+                  { icon: '♾️', title: 'Unlimited Earning Potential', desc: 'No cap on how much you can earn through referrals' }
+                ].map((item, i) => (
+                  <div key={i} className="flex gap-4 bg-slate-800/40 border border-yellow-500/20 rounded-xl p-4 hover:border-yellow-500/50 transition-all">
+                    <span className="text-3xl">{item.icon}</span>
+                    <div>
+                      <p className="font-bold text-white">✔ {item.title}</p>
+                      <p className="text-gray-400 text-sm mt-1">{item.desc}</p>
+                    </div>
                   </div>
-                  <div className="p-6">
-                    <div className="text-4xl mb-3">{feature.icon}</div>
-                    <h3 className="text-xl font-bold mb-2">{feature.title}</h3>
-                    <p className="text-gray-400">{feature.description}</p>
+                ))}
+              </div>
+              <p className="mt-6 text-yellow-300 italic text-sm">👉 Build a passive income stream while growing with us.</p>
+            </div>
+            <div className="animate-fade-in-up" style={{animationDelay:'0.2s'}}>
+              <div className="relative">
+                <div className="absolute inset-0 bg-yellow-500/10 rounded-2xl blur-2xl"></div>
+                <div className="relative bg-gradient-to-br from-yellow-500/10 to-yellow-600/5 border-2 border-yellow-500/40 rounded-2xl p-8">
+                  <h3 className="text-2xl font-bold text-yellow-400 mb-6 text-center">How It Works</h3>
+                  <div className="space-y-5">
+                    {[
+                      { step: '1', text: 'Join our referral program' },
+                      { step: '2', text: 'Share your unique referral link' },
+                      { step: '3', text: 'Friend signs up & deposits' },
+                      { step: '4', text: 'You earn your commission' }
+                    ].map((item, i) => (
+                      <div key={i} className="flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-yellow-500 to-yellow-600 flex items-center justify-center font-bold text-slate-900 flex-shrink-0">{item.step}</div>
+                        <div className="flex-1 h-px bg-yellow-500/20"></div>
+                        <p className="text-gray-300 flex-1">{item.text}</p>
+                      </div>
+                    ))}
                   </div>
+                  <button onClick={() => navigate('/signup')} className="w-full mt-6 py-3 bg-gradient-to-r from-yellow-500 to-yellow-600 rounded-lg font-bold text-slate-900 hover:shadow-lg hover:shadow-yellow-500/30 transition-all">
+                    Join Referral Program
+                  </button>
                 </div>
               </div>
-            ))}
+            </div>
           </div>
         </div>
       </section>
@@ -544,41 +716,26 @@ const ProfitVisionLanding = () => {
       <section id="contact" className="relative py-20 px-4 sm:px-6 lg:px-8 z-10">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16 animate-fade-in-up">
+            <p className="text-yellow-400 font-semibold tracking-widest uppercase mb-2">Get in Touch</p>
             <h2 className="text-5xl font-bold mb-2">
-              Get in <span className="text-yellow-400">Touch</span>
+              We're Here to <span className="text-yellow-400">Support You</span>
             </h2>
-            <p className="text-gray-400 text-lg">Have questions? We're here to help</p>
+            <p className="text-gray-400 text-lg">Our dedicated support team ensures smooth onboarding and quick assistance.</p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8 mb-12">
+          <div className="grid md:grid-cols-4 gap-6 mb-12">
             {[
-              {
-                icon: Mail,
-                title: 'Email',
-                content: 'support@profitvisionfx.com',
-                link: 'mailto:support@profitvisionfx.com'
-              },
-              {
-                icon: Phone,
-                title: 'Phone',
-                content: '+971 4 XXX XXXX',
-                link: 'tel:+97143000000'
-              },
-              {
-                icon: MapPin,
-                title: 'Location',
-                content: 'Dubai, UAE',
-                link: '#'
-              }
+              { icon: Mail, title: 'Email', content: 'support@profitvisionfx.com', link: 'mailto:support@profitvisionfx.com', color: 'yellow' },
+              { icon: Phone, title: 'WhatsApp', content: '+91-XXXXXXXXXX', link: 'https://wa.me/91XXXXXXXXXX', color: 'green' },
+              { icon: MapPin, title: 'Location', content: 'Dubai, UAE', link: '#', color: 'blue' },
+              { icon: Shield, title: 'Support Hours', content: 'Mon–Fri (Market Hours)', link: '#', color: 'yellow' }
             ].map((contact, i) => (
               <div key={i} className="group relative animate-fade-in-up" style={{animationDelay: `${i * 0.1}s`}}>
                 <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/20 to-blue-500/20 rounded-2xl blur-xl group-hover:blur-2xl transition-all duration-300 opacity-0 group-hover:opacity-100"></div>
-                <div className="relative bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur border border-yellow-500/30 rounded-2xl p-8 text-center hover:border-yellow-500/60 transition-all duration-300">
-                  <contact.icon className="w-12 h-12 text-yellow-400 mx-auto mb-4" />
-                  <h3 className="text-xl font-bold mb-2">{contact.title}</h3>
-                  <a href={contact.link} className="text-gray-400 hover:text-yellow-400 transition-colors">
-                    {contact.content}
-                  </a>
+                <div className="relative bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur border border-yellow-500/30 rounded-2xl p-6 text-center hover:border-yellow-500/60 transition-all duration-300">
+                  <contact.icon className="w-10 h-10 text-yellow-400 mx-auto mb-3" />
+                  <h3 className="text-lg font-bold mb-1">{contact.title}</h3>
+                  <a href={contact.link} className="text-gray-400 hover:text-yellow-400 transition-colors text-sm">{contact.content}</a>
                 </div>
               </div>
             ))}
@@ -673,16 +830,97 @@ const ProfitVisionLanding = () => {
         </div>
       </section>
 
+      {/* Legal Modal */}
+      {legalModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setLegalModal(null)}></div>
+          <div className="relative bg-slate-900 border border-yellow-500/30 rounded-2xl p-8 max-w-2xl w-full max-h-[80vh] overflow-y-auto z-10">
+            <button onClick={() => setLegalModal(null)} className="absolute top-4 right-4 text-gray-400 hover:text-white"><X size={24}/></button>
+            {legalModal === 'risk' && (
+              <div>
+                <div className="flex items-center gap-3 mb-6"><AlertTriangle className="text-yellow-400" size={28}/><h2 className="text-2xl font-bold text-yellow-400">Risk Disclosure</h2></div>
+                <div className="space-y-4 text-gray-300 leading-relaxed text-sm">
+                  <p>Trading in forex, commodities, and leveraged financial instruments carries a <strong className="text-yellow-400">high level of risk</strong> and may not be suitable for all investors.</p>
+                  <p>You should carefully consider your investment objectives, level of experience, and risk appetite before participating in trading. There is a possibility of <strong className="text-red-400">losing some or all of your invested capital.</strong></p>
+                  <p>ProfitVision FX does not guarantee profits or protection from losses. All trading decisions, whether manual or through copy trading, are ultimately the responsibility of the client.</p>
+                  <p className="italic text-gray-400">Past performance is not indicative of future results.</p>
+                </div>
+              </div>
+            )}
+            {legalModal === 'terms' && (
+              <div>
+                <div className="flex items-center gap-3 mb-6"><FileText className="text-yellow-400" size={28}/><h2 className="text-2xl font-bold text-yellow-400">Terms & Conditions</h2></div>
+                <div className="space-y-3 text-gray-300 leading-relaxed text-sm">
+                  <p>By accessing and using our services, you agree to the following:</p>
+                  <ol className="list-decimal list-inside space-y-2 pl-2">
+                    <li>You understand the risks involved in trading.</li>
+                    <li>You are responsible for your investment decisions.</li>
+                    <li>ProfitVision FX provides trading assistance, not financial advice.</li>
+                    <li>Copy trading results may vary depending on account size, broker conditions, and execution speed.</li>
+                    <li>We reserve the right to modify services, pricing, or policies at any time without prior notice.</li>
+                  </ol>
+                </div>
+              </div>
+            )}
+            {legalModal === 'privacy' && (
+              <div>
+                <div className="flex items-center gap-3 mb-6"><Lock className="text-yellow-400" size={28}/><h2 className="text-2xl font-bold text-yellow-400">Privacy Policy</h2></div>
+                <div className="space-y-4 text-gray-300 leading-relaxed text-sm">
+                  <p>At ProfitVision FX, we value your privacy and are committed to protecting your personal information.</p>
+                  <div>
+                    <p className="font-semibold text-white mb-2">We collect:</p>
+                    <ul className="list-disc list-inside space-y-1 pl-2">
+                      <li>Name, email, phone number</li>
+                      <li>Trading-related preferences</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <p className="font-semibold text-white mb-2">We use your data to:</p>
+                    <ul className="list-disc list-inside space-y-1 pl-2">
+                      <li>Provide services</li>
+                      <li>Improve user experience</li>
+                      <li>Communicate important updates</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Footer */}
       <footer className="relative border-t border-yellow-500/20 py-12 px-4 sm:px-6 lg:px-8 bg-gradient-to-t from-yellow-900/10 to-transparent z-10">
         <div className="max-w-7xl mx-auto">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-            <p className="text-gray-400">© 2024 Profit Vision FX. All rights reserved. | Trading involves risk. Please trade responsibly.</p>
-            <div className="flex gap-6">
-              <a href="#" className="text-gray-400 hover:text-yellow-400 transition-colors">Privacy Policy</a>
-              <a href="#" className="text-gray-400 hover:text-yellow-400 transition-colors">Terms of Use</a>
-              <a href="#" className="text-gray-400 hover:text-yellow-400 transition-colors">Contact</a>
+          <div className="grid md:grid-cols-3 gap-8 mb-8">
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <img src={logo} alt="ProfitVision FX" className="h-10 w-auto" />
+                <span className="font-bold text-yellow-400">ProfitVision FX</span>
+              </div>
+              <p className="text-gray-400 text-sm">Trade Smarter. Grow Stronger. Scale Consistently.</p>
+              <p className="text-gray-500 text-xs mt-2">Registered UK | Based in Dubai</p>
             </div>
+            <div>
+              <p className="font-bold text-white mb-3">Quick Links</p>
+              <div className="space-y-2">
+                {['About', 'Services', 'Education', 'Referral', 'Contact'].map((item) => (
+                  <button key={item} onClick={() => scrollToSection(item.toLowerCase())} className="block text-gray-400 hover:text-yellow-400 transition-colors text-sm">{item}</button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <p className="font-bold text-white mb-3">Legal</p>
+              <div className="space-y-2">
+                <button onClick={() => setLegalModal('risk')} className="block text-gray-400 hover:text-yellow-400 transition-colors text-sm flex items-center gap-2"><AlertTriangle size={14}/> Risk Disclosure</button>
+                <button onClick={() => setLegalModal('terms')} className="block text-gray-400 hover:text-yellow-400 transition-colors text-sm flex items-center gap-2"><FileText size={14}/> Terms & Conditions</button>
+                <button onClick={() => setLegalModal('privacy')} className="block text-gray-400 hover:text-yellow-400 transition-colors text-sm flex items-center gap-2"><Lock size={14}/> Privacy Policy</button>
+              </div>
+            </div>
+          </div>
+          <div className="border-t border-yellow-500/20 pt-6 flex flex-col md:flex-row justify-between items-center gap-4">
+            <p className="text-gray-500 text-sm">© 2024 ProfitVision FX. All rights reserved.</p>
+            <p className="text-gray-600 text-xs">⚠️ Trading involves significant risk. Please trade responsibly.</p>
           </div>
         </div>
       </footer>
