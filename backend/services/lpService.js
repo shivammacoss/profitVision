@@ -84,7 +84,8 @@ class LPService {
       leverage: trade.leverage || 100,
       contract_size: trade.contractSize || this.getContractSize(trade.symbol), // Send contract size for P/L calculation
       trading_account_id: trade.tradingAccountId?.toString() || '',
-      opened_at: trade.openedAt?.toISOString() || new Date().toISOString()
+      opened_at: trade.openedAt?.toISOString() || new Date().toISOString(),
+      retroactive: true,
     }
 
     const body = JSON.stringify(tradeData)
@@ -110,8 +111,9 @@ class LPService {
         console.log(`[LP Service] Trade ${trade.tradeId} pushed to Corecen successfully`)
         return { success: true, data }
       } else {
-        console.error(`[LP Service] Failed to push trade to Corecen:`, data)
-        return { success: false, error: data.error?.message || data.message || 'Push failed' }
+        const errMsg = data.error?.message || data.message || `HTTP ${response.status}`
+        console.error(`[LP Service] Failed to push trade to Corecen (${response.status}): ${errMsg}`, JSON.stringify(data))
+        return { success: false, error: errMsg }
       }
     } catch (error) {
       console.error('[LP Service] Error pushing trade to Corecen:', error)

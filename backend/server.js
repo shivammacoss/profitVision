@@ -35,6 +35,7 @@ import paymentGatewaySettingsRoutes from './routes/paymentGatewaySettings.js'
 import creditRoutes from './routes/credit.js'
 import ibModeRoutes from './routes/ibMode.js'
 import lpIntegrationRoutes, { getAllLpPrices } from './routes/lpIntegration.js'
+import lpConnectionMonitor from './services/lpConnectionMonitor.js'
 import manualCryptoRoutes from './routes/manualCrypto.js'
 import contactRoutes from './routes/contact.js'
 import path from 'path'
@@ -266,7 +267,20 @@ app.get('/', (req, res) => {
   res.json({ message: 'ProfitVisionFX API is running', version: '1.0.0' })
 })
 
+// LP Connection Health Check
+app.get('/api/lp-health', async (req, res) => {
+  try {
+    const status = await lpConnectionMonitor.forceHealthCheck()
+    res.json({ success: true, lpConnection: status, timestamp: new Date().toISOString() })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message, timestamp: new Date().toISOString() })
+  }
+})
+
 const PORT = process.env.PORT || 5000
 httpServer.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on port ${PORT}`)
+  
+  // Start LP connection monitor - pings Corecen every 30 seconds
+  lpConnectionMonitor.startMonitor()
 })
