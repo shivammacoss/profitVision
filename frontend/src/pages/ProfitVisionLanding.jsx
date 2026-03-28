@@ -277,53 +277,29 @@ const ProfitVisionLanding = () => {
       {/* About Section */}
       <section id="about" className="relative py-20 px-4 sm:px-6 lg:px-8 z-10">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <p className="text-yellow-400 font-semibold tracking-widest uppercase mb-2">Who We Are</p>
-            <h2 className="text-5xl font-bold">About <span className="text-yellow-400">ProfitVision FX</span></h2>
-          </div>
-          <div className="grid md:grid-cols-2 gap-12 items-start">
-            <div className="space-y-6 animate-fade-in-up">
-              <p className="text-gray-300 leading-relaxed text-lg">
-                <span className="text-yellow-400 font-semibold">ProfitVision FX</span> is a performance-driven forex trading solutions provider committed to delivering <span className="text-yellow-400">consistency, transparency,</span> and long-term value.
-              </p>
-              <p className="text-gray-400 leading-relaxed">
-                Our team includes professional traders, quantitative analysts, and risk management experts who operate with a disciplined and data-backed approach.
-              </p>
-              <p className="text-gray-400 leading-relaxed">We don't believe in shortcuts or unrealistic promises. Instead, we focus on:</p>
-              <div className="space-y-3">
-                {[
-                  { icon: '🏗️', text: 'Structured trading systems' },
-                  { icon: '🛡️', text: 'Strict risk control' },
-                  { icon: '📊', text: 'Sustainable profit models' }
-                ].map((item, i) => (
-                  <div key={i} className="flex items-center gap-3 bg-yellow-500/5 border border-yellow-500/20 rounded-lg px-4 py-3">
-                    <span className="text-xl">{item.icon}</span>
-                    <span className="text-gray-200 font-medium">{item.text}</span>
-                  </div>
-                ))}
-              </div>
+          <div className="text-center mb-16 animate-fade-in-up">
+            <div className="flex items-center justify-center gap-3 mb-4">
+              <div className="text-5xl">🏢</div>
+              <h2 className="text-5xl font-bold">About <span className="text-yellow-400">Profit Vision FX</span></h2>
             </div>
-            <div className="space-y-6 animate-fade-in-up" style={{animationDelay: '0.2s'}}>
-              <div className="relative bg-gradient-to-br from-yellow-500/10 to-blue-500/5 border border-yellow-500/30 rounded-2xl p-6">
-                <h3 className="text-xl font-bold text-yellow-400 mb-3 flex items-center gap-2"><Star size={18}/> Our Vision</h3>
-                <p className="text-gray-300">To become a globally trusted trading ecosystem where traders can grow with confidence.</p>
-              </div>
-              <div className="relative bg-gradient-to-br from-blue-500/10 to-yellow-500/5 border border-blue-500/30 rounded-2xl p-6">
-                <h3 className="text-xl font-bold text-blue-400 mb-3 flex items-center gap-2"><TrendingUp size={18}/> Our Mission</h3>
-                <p className="text-gray-300">To simplify trading while maintaining professional standards and disciplined execution.</p>
-              </div>
-              <div className="grid grid-cols-3 gap-4">
-                {[
-                  { val: '10+', label: 'Years Exp.' },
-                  { val: '5000+', label: 'Traders' },
-                  { val: '$50M+', label: 'Volume' }
-                ].map((stat, i) => (
-                  <div key={i} className="bg-gradient-to-br from-slate-800/60 to-slate-900/60 border border-yellow-500/20 rounded-xl p-4 text-center">
-                    <div className="text-2xl font-bold text-yellow-400">{stat.val}</div>
-                    <p className="text-xs text-gray-400 mt-1">{stat.label}</p>
-                  </div>
-                ))}
-              </div>
+          </div>
+          <div className="max-w-4xl mx-auto space-y-6 text-center animate-fade-in-up">
+            <p className="text-gray-300 leading-relaxed text-lg">
+              Profit Vision FX is <span className="text-yellow-400 font-semibold">Registered in UK</span> and based in Dubai, with a team of pro-traders & mentors.
+            </p>
+            <p className="text-gray-300 leading-relaxed text-lg">
+              They use their knowledge & expertise to generate profits daily, monthly, and yearly.
+            </p>
+            <p className="text-gray-300 leading-relaxed text-lg">
+              The team has strong fundamentals & technical knowledge applied during live trading.
+            </p>
+            <p className="text-gray-300 leading-relaxed text-lg">
+              Plans to expand worldwide and provide financial freedom opportunities to clients.
+            </p>
+            <div className="pt-8 mt-8 border-t border-yellow-500/20">
+              <p className="text-gray-200 leading-relaxed text-lg">
+                With a vision to expand globally, Profit Vision aims to create a trusted platform where clients can learn, grow, and achieve lasting financial freedom. We're not just trading; we're building opportunities for wealth, stability, and success for individuals worldwide.
+              </p>
             </div>
           </div>
         </div>
