@@ -53,23 +53,25 @@ async function fixOldCopyTrades() {
   await mongoose.connect(MONGODB_URI)
   console.log('✅ Connected to database\n')
 
-  // Step 1: Find all closed copy trades that were NOT processed
-  // These have refillAction = null (credit system was never called)
-  const unprocessedCopyTrades = await CopyTrade.find({
-    status: 'CLOSED',
-    $or: [
-      { refillAction: null },
-      { refillAction: { $exists: false } },
-      { creditChange: 0, rawPnl: { $ne: 0 } }
-    ]
-  })
-  .populate('followerTradeId')
-  .sort({ closedAt: 1 }) // Process in chronological order (oldest first)
+  // Step 1: Dump ALL closed copy trades first to see their state
+  const allClosed = await CopyTrade.find({ status: 'CLOSED' }).populate('followerTradeId').sort({ closedAt: 1 })
+  console.log(`📊 Total closed copy trades in DB: ${allClosed.length}`)
+  
+  for (const ct of allClosed) {
+    const trade = ct.followerTradeId
+    const pnl = trade ? calculateRawPnl(trade) - (trade.swap || 0) : 'N/A'
+    console.log(`   CopyTrade ${ct._id}: rawPnl=${ct.rawPnl}, creditChange=${ct.creditChange}, refillAction=${ct.refillAction}, tradePnl=${typeof pnl === 'number' ? pnl.toFixed(2) : pnl}`)
+  }
+  console.log('')
 
-  console.log(`📊 Found ${unprocessedCopyTrades.length} unprocessed closed copy trades\n`)
+  // Step 2: Find ALL closed copy trades and reprocess from scratch
+  // We reset credit to initialDeposit and replay all trades
+  const unprocessedCopyTrades = allClosed.filter(ct => ct.followerTradeId)
+
+  console.log(`📊 Found ${unprocessedCopyTrades.length} copy trades to reprocess\n`)
 
   if (unprocessedCopyTrades.length === 0) {
-    console.log('✅ No corrections needed - all trades already processed!')
+    console.log('✅ No copy trades found to fix!')
     process.exit(0)
   }
 
@@ -113,11 +115,20 @@ async function fixOldCopyTrades() {
     console.log(`   Trades to process: ${copyTrades.length}`)
     console.log('')
 
-    // Track running balances
-    let runningCredit = account.credit || 0
-    let runningWallet = wallet?.balance || 0
+    // IMPORTANT: Reset credit to initialDeposit and replay ALL trades from scratch
+    // Current credit ($1000) is wrong because losses were never deducted
+    // We start from the deposit amount and apply all P&L sequentially
+    const originalCredit = follower.initialDeposit || 1000
+    const originalWallet = (wallet?.balance || 0)
+    
+    // Add back any previous COPY_CREDIT_REFILL wallet deductions (they were based on wrong data)
+    // We'll recalculate them fresh
+    let runningCredit = originalCredit
+    let runningWallet = originalWallet
     let accountCreditChange = 0
     let accountWalletChange = 0
+    
+    console.log(`   📌 Starting from: Credit=$${runningCredit.toFixed(2)}, Wallet=$${runningWallet.toFixed(2)}`)
 
     for (const copyTrade of copyTrades) {
       const trade = copyTrade.followerTradeId
@@ -159,29 +170,7 @@ async function fixOldCopyTrades() {
         accountWalletChange -= walletRefillAmount
 
         if (!DRY_RUN) {
-          // Record loss in credit ledger
-          await CreditLedger.create({
-            userId, tradingAccountId: account._id, type: 'TRADE_LOSS',
-            amount: -actualDeduction, balanceAfter: creditBefore - actualDeduction,
-            tradeId: trade._id, copyTradeId: copyTrade._id, masterId: copyTrade.masterId,
-            description: `[CORRECTION] Copy trade loss: -$${actualDeduction.toFixed(2)}`,
-            metadata: { correctionScript: true, pnl: -lossAmount, minimumCredit }
-          })
-
-          // Record wallet refill if applicable
-          if (walletRefillAmount > 0) {
-            await Wallet.findOneAndUpdate({ userId }, { $inc: { balance: -walletRefillAmount } })
-            
-            await CreditLedger.create({
-              userId, tradingAccountId: account._id, type: 'WALLET_AUTO_REFILL',
-              amount: walletRefillAmount, balanceAfter: creditAfter,
-              tradeId: trade._id, copyTradeId: copyTrade._id, masterId: copyTrade.masterId,
-              description: `[CORRECTION] Auto-refill from wallet: +$${walletRefillAmount.toFixed(2)}`,
-              metadata: { correctionScript: true, walletDeducted: walletRefillAmount, minimumCredit }
-            })
-          }
-
-          // Update CopyTrade record
+          // Update CopyTrade record only (wallet/credit set at end)
           await CopyTrade.findByIdAndUpdate(copyTrade._id, {
             $set: {
               rawPnl: correctPnl,
@@ -236,31 +225,7 @@ async function fixOldCopyTrades() {
         console.log(`      Credit: $${profitToCredit.toFixed(2)}, Wallet: $${profitToWallet.toFixed(2)}`)
 
         if (!DRY_RUN) {
-          // Credit profit to wallet
-          if (profitToWallet > 0) {
-            await Wallet.findOneAndUpdate({ userId }, { $inc: { balance: profitToWallet } }, { upsert: true })
-          }
-
-          // Credit profit to credit account
-          if (profitToCredit > 0) {
-            await CreditLedger.create({
-              userId, tradingAccountId: account._id,
-              type: profitToCredit >= (minimumCredit - creditBefore) ? 'REFILL_COMPLETE' : 'PROFIT_REFILL',
-              amount: profitToCredit, balanceAfter: creditAfter,
-              tradeId: trade._id, copyTradeId: copyTrade._id, masterId: copyTrade.masterId,
-              description: `[CORRECTION] Profit refill: +$${profitToCredit.toFixed(2)}`,
-              metadata: { correctionScript: true, profitTotal: correctPnl, profitToCredit, profitToWallet, minimumCredit }
-            })
-          }
-
-          // Credit master share
-          if (masterShare > 0 && master) {
-            master.pendingCommission = (master.pendingCommission || 0) + masterShare
-            master.totalCommissionEarned = (master.totalCommissionEarned || 0) + masterShare
-            await master.save()
-          }
-
-          // Update CopyTrade record
+          // Update CopyTrade record only (wallet/credit set at end)
           await CopyTrade.findByIdAndUpdate(copyTrade._id, {
             $set: {
               rawPnl: correctPnl,
@@ -283,9 +248,26 @@ async function fixOldCopyTrades() {
       totalTradesFixed++
     }
 
-    // Update final account credit balance
+    // Calculate net wallet change (runningWallet was modified during replay)
+    const walletDelta = runningWallet - originalWallet
+    
+    totalCreditChange += (runningCredit - originalCredit)
+    totalWalletChange += walletDelta
+
+    console.log(`\n   📊 Account Summary:`)
+    console.log(`      Credit: $${originalCredit.toFixed(2)} → $${runningCredit.toFixed(2)} (replayed from initial deposit)`)
+    console.log(`      Wallet: $${originalWallet.toFixed(2)} → $${runningWallet.toFixed(2)} (delta: $${walletDelta.toFixed(2)})`)
+
+    // Apply final balances
     if (!DRY_RUN) {
+      // SET credit to replayed value
       await TradingAccount.findByIdAndUpdate(account._id, { $set: { credit: runningCredit } })
+      
+      // SET wallet to replayed value (apply delta)
+      if (walletDelta !== 0) {
+        await Wallet.findOneAndUpdate({ userId }, { $inc: { balance: walletDelta } })
+      }
+      
       await CopyFollower.findByIdAndUpdate(follower._id, {
         $set: {
           currentCredit: runningCredit,
@@ -293,14 +275,20 @@ async function fixOldCopyTrades() {
           isRefillMode: runningCredit < minimumCredit
         }
       })
+
+      // Create single correction ledger entry
+      await CreditLedger.create({
+        userId, tradingAccountId: account._id, type: 'ADMIN_CREDIT',
+        amount: runningCredit - originalCredit,
+        balanceAfter: runningCredit,
+        description: `[CORRECTION] P&L replay: Credit $${originalCredit} → $${runningCredit.toFixed(2)}, Wallet delta: $${walletDelta.toFixed(2)}`,
+        metadata: { correctionScript: true, tradesReprocessed: copyTrades.length, originalCredit, finalCredit: runningCredit, walletDelta }
+      })
+
+      console.log(`      ✅ APPLIED`)
+    } else {
+      console.log(`      ⏭️  DRY RUN - not applied`)
     }
-
-    totalCreditChange += accountCreditChange
-    totalWalletChange += accountWalletChange
-
-    console.log(`\n   📊 Account Summary:`)
-    console.log(`      Credit: $${(account.credit || 0).toFixed(2)} → $${runningCredit.toFixed(2)} (change: $${accountCreditChange.toFixed(2)})`)
-    console.log(`      Wallet: $${(wallet?.balance || 0).toFixed(2)} → $${runningWallet.toFixed(2)} (change: $${accountWalletChange.toFixed(2)})`)
     console.log('')
   }
 
