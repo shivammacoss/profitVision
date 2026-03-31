@@ -541,9 +541,9 @@ class TradeEngine {
     // Close follower trades if this is a master trade
     // IMPORTANT: Only call this for master trades, not for follower trades being closed
     // Check if this trade is a master trade by looking for a MasterTrader with this account
-    this.closeFollowerTradesIfMaster(trade, closePrice)
+    await this.closeFollowerTradesIfMaster(trade, closePrice)
 
-    return { trade, realizedPnl }
+    return { trade, realizedPnl, realizedPnlForBalance }
   }
 
   // Only close follower trades if this is actually a master trade

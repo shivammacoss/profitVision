@@ -699,10 +699,14 @@ class CopyTradingEngine {
           throw closeError // Re-throw other errors
         }
 
-        const rawPnl = result.realizedPnl
+        // Use realizedPnlForBalance (NOT realizedPnl) for copy trades
+        // realizedPnl = rawPnl - openCommission - swap - closeCommission (double-counts commission)
+        // realizedPnlForBalance = rawPnl - swap - closeCommission (correct: openCommission was never charged for copy trades)
+        const rawPnl = result.realizedPnlForBalance !== undefined ? result.realizedPnlForBalance : result.realizedPnl
         
         console.log(`[CopyTrade CREDIT] ========== CREDIT-BASED P/L CALCULATION ==========`)
-        console.log(`[CopyTrade CREDIT] Raw P/L from tradeEngine: $${rawPnl.toFixed(2)}`)
+        console.log(`[CopyTrade CREDIT] P/L for credit system: $${rawPnl.toFixed(2)} (realizedPnlForBalance)`)
+        console.log(`[CopyTrade CREDIT] Display P/L (realizedPnl): $${result.realizedPnl.toFixed(2)}`)
         console.log(`[CopyTrade CREDIT] Trade Close Price: ${result.trade.closePrice}`)
         console.log(`[CopyTrade CREDIT] Trade Open Price: ${result.trade.openPrice}`)
         console.log(`[CopyTrade CREDIT] Trade Quantity (executed): ${result.trade.quantity}`)
