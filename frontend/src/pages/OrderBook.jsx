@@ -31,6 +31,12 @@ import { useTheme } from '../context/ThemeContext'
 import logo from '../assets/logo.png'
 
 import { API_URL } from '../config/api'
+import {
+  effectiveStopLoss,
+  effectiveTakeProfit,
+  closeReasonLabel,
+  formatHistoryPrice,
+} from '../utils/tradeHistoryDisplay'
 
 const OrderBook = () => {
   const navigate = useNavigate()
@@ -592,11 +598,27 @@ const OrderBook = () => {
                               <th className="text-left text-gray-500 text-xs font-medium py-3 px-4">Qty</th>
                               <th className="text-left text-gray-500 text-xs font-medium py-3 px-4">Open</th>
                               <th className="text-left text-gray-500 text-xs font-medium py-3 px-4">Close</th>
+                              <th className="text-left text-gray-500 text-xs font-medium py-3 px-4">Stop loss</th>
+                              <th className="text-left text-gray-500 text-xs font-medium py-3 px-4">Take profit</th>
                               <th className="text-left text-gray-500 text-xs font-medium py-3 px-4">P&L</th>
+                              <th className="text-left text-gray-500 text-xs font-medium py-3 px-4">Exit</th>
                             </tr>
                           </thead>
                           <tbody>
-                            {getPaginatedHistory().map((trade) => (
+                            {getPaginatedHistory().map((trade) => {
+                              const sl = effectiveStopLoss(trade)
+                              const tp = effectiveTakeProfit(trade)
+                              const exitTone =
+                                trade.closedBy === 'SL'
+                                  ? 'text-red-400'
+                                  : trade.closedBy === 'TP'
+                                    ? 'text-green-500'
+                                    : trade.closedBy === 'STOP_OUT'
+                                      ? 'text-orange-400'
+                                      : trade.closedBy === 'ADMIN'
+                                        ? 'text-amber-500'
+                                        : 'text-gray-400'
+                              return (
                               <tr key={trade._id} className="border-b border-gray-800 hover:bg-dark-700/50">
                                 <td className="py-3 px-4 text-gray-400 text-xs">{formatDate(trade.closedAt)}</td>
                                 <td className="py-3 px-4 text-gray-400 text-sm">{trade.accountName}</td>
@@ -608,13 +630,23 @@ const OrderBook = () => {
                                   </span>
                                 </td>
                                 <td className={`py-3 px-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{trade.quantity}</td>
-                                <td className="py-3 px-4 text-gray-400">{trade.openPrice?.toFixed(5)}</td>
-                                <td className="py-3 px-4 text-gray-400">{trade.closePrice?.toFixed(5)}</td>
+                                <td className="py-3 px-4 text-gray-400">{formatHistoryPrice(trade.symbol, trade.openPrice)}</td>
+                                <td className="py-3 px-4 text-gray-400">{formatHistoryPrice(trade.symbol, trade.closePrice)}</td>
+                                <td className="py-3 px-4 text-gray-400 text-xs">
+                                  {sl != null ? formatHistoryPrice(trade.symbol, sl) : '—'}
+                                  {trade.closedBy === 'SL' && sl != null && <span className="text-red-400 ml-1">hit</span>}
+                                </td>
+                                <td className="py-3 px-4 text-gray-400 text-xs">
+                                  {tp != null ? formatHistoryPrice(trade.symbol, tp) : '—'}
+                                  {trade.closedBy === 'TP' && tp != null && <span className="text-green-500 ml-1">hit</span>}
+                                </td>
                                 <td className={`py-3 px-4 font-medium ${(trade.realizedPnl || 0) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
                                   {(trade.realizedPnl || 0) >= 0 ? '+' : ''}${(trade.realizedPnl || 0).toFixed(2)}
                                 </td>
+                                <td className={`py-3 px-4 text-xs ${exitTone}`}>{closeReasonLabel(trade.closedBy)}</td>
                               </tr>
-                            ))}
+                              )
+                            })}
                           </tbody>
                         </table>
 

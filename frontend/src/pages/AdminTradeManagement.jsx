@@ -21,6 +21,12 @@ import binanceApiService from '../services/binanceApi'
 import priceStreamService from '../services/priceStream'
 
 import { API_URL } from '../config/api'
+import {
+  effectiveStopLoss,
+  effectiveTakeProfit,
+  closeReasonLabel,
+  formatHistoryPrice,
+} from '../utils/tradeHistoryDisplay'
 
 const AdminTradeManagement = () => {
   const { isDarkMode } = useTheme()
@@ -60,6 +66,8 @@ const AdminTradeManagement = () => {
   const [loadingPrices, setLoadingPrices] = useState(false)
   const [closeFormPrice, setCloseFormPrice] = useState(0)
   const [livePrices, setLivePrices] = useState({})
+  const [showTradeDetailModal, setShowTradeDetailModal] = useState(false)
+  const [detailTrade, setDetailTrade] = useState(null)
   
   // Pagination
   const [currentPage, setCurrentPage] = useState(1)
@@ -348,6 +356,11 @@ const AdminTradeManagement = () => {
     setShowEditModal(true)
   }
 
+  const openTradeDetail = (trade) => {
+    setDetailTrade(trade)
+    setShowTradeDetailModal(true)
+  }
+
   const openCloseModal = async (trade) => {
     setSelectedTrade(trade)
     setShowCloseModal(true)
@@ -565,7 +578,14 @@ const AdminTradeManagement = () => {
             {/* Mobile Card View */}
             <div className="block lg:hidden p-4 space-y-3">
               {filteredTrades.map((trade) => (
-                <div key={trade._id} className={`rounded-xl p-4 border ${isDarkMode ? 'bg-dark-700 border-gray-700' : 'bg-gray-50 border-gray-200'}`}>
+                <div
+                  key={trade._id}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => openTradeDetail(trade)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openTradeDetail(trade); } }}
+                  className={`rounded-xl p-4 border cursor-pointer transition-colors ${isDarkMode ? 'bg-dark-700 border-gray-700 hover:bg-dark-600/50' : 'bg-gray-50 border-gray-200 hover:bg-gray-100'}`}
+                >
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
                       <span className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{trade.symbol}</span>
@@ -615,14 +635,22 @@ const AdminTradeManagement = () => {
                     </div>
                   </div>
                   {/* Action Buttons */}
-                  <div className="flex gap-2 pt-3 border-t border-gray-600">
+                  <div className={`flex gap-2 pt-3 border-t ${isDarkMode ? 'border-gray-600' : 'border-gray-200'}`} onClick={(e) => e.stopPropagation()}>
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); openTradeDetail(trade); }}
+                      className={`py-2 px-3 rounded-lg text-sm font-medium flex items-center justify-center gap-1 ${isDarkMode ? 'bg-dark-600 text-gray-300 hover:bg-dark-500' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+                    >
+                      <Eye size={14} /> Details
+                    </button>
                     {trade.bookType === 'A' ? (
-                      <div className="w-full py-2 bg-gray-500/20 text-gray-400 rounded-lg text-sm font-medium text-center">
+                      <div className="flex-1 py-2 bg-gray-500/20 text-gray-400 rounded-lg text-sm font-medium text-center">
                         Read-Only (A-Book)
                       </div>
                     ) : (
                       <>
                         <button
+                          type="button"
                           onClick={() => openEditModal(trade)}
                           className="flex-1 py-2 bg-red-500/20 hover:bg-red-500/30 text-blue-500 rounded-lg text-sm font-medium flex items-center justify-center gap-1"
                         >
@@ -630,6 +658,7 @@ const AdminTradeManagement = () => {
                         </button>
                         {trade.status === 'OPEN' && (
                           <button
+                            type="button"
                             onClick={() => openCloseModal(trade)}
                             className="flex-1 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-500 rounded-lg text-sm font-medium flex items-center justify-center gap-1"
                           >
@@ -662,7 +691,11 @@ const AdminTradeManagement = () => {
                 </thead>
                 <tbody>
                   {filteredTrades.map((trade) => (
-                    <tr key={trade._id} className={`border-b ${isDarkMode ? 'border-gray-800 hover:bg-dark-700/50' : 'border-gray-200 hover:bg-gray-50'}`}>
+                    <tr
+                      key={trade._id}
+                      onClick={() => openTradeDetail(trade)}
+                      className={`border-b cursor-pointer ${isDarkMode ? 'border-gray-800 hover:bg-dark-700/50' : 'border-gray-200 hover:bg-gray-50'}`}
+                    >
                       <td className={`py-4 px-4 font-mono text-sm ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{trade.tradeId}</td>
                       <td className="py-4 px-4">
                         <p className={isDarkMode ? 'text-white' : 'text-gray-900'}>{trade.userId?.firstName || trade.userId?.email}</p>
@@ -700,29 +733,41 @@ const AdminTradeManagement = () => {
                           )}
                         </div>
                       </td>
-                      <td className="py-4 px-4">
-                        {trade.bookType === 'A' ? (
-                          <span className="px-2 py-1 rounded text-xs bg-gray-500/20 text-gray-400">Read-Only</span>
-                        ) : (
-                          <div className="flex items-center gap-1">
-                            <button 
-                              onClick={() => openEditModal(trade)}
-                              className="p-2 hover:bg-red-500/20 rounded-lg transition-colors text-gray-400 hover:text-blue-500" 
-                              title="Edit Trade"
-                            >
-                              <Edit size={16} />
-                            </button>
-                            {trade.status === 'OPEN' && (
+                      <td className="py-4 px-4" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center gap-1 flex-wrap">
+                          <button 
+                            type="button"
+                            onClick={() => openTradeDetail(trade)}
+                            className="p-2 hover:bg-blue-500/20 rounded-lg transition-colors text-gray-400 hover:text-blue-400" 
+                            title="Trade details"
+                          >
+                            <Eye size={16} />
+                          </button>
+                          {trade.bookType === 'A' ? (
+                            <span className="px-2 py-1 rounded text-xs bg-gray-500/20 text-gray-400">Read-Only</span>
+                          ) : (
+                            <>
                               <button 
-                                onClick={() => openCloseModal(trade)}
-                                className="p-2 hover:bg-red-500/20 rounded-lg transition-colors text-gray-400 hover:text-red-500" 
-                                title="Close Trade"
+                                type="button"
+                                onClick={() => openEditModal(trade)}
+                                className="p-2 hover:bg-red-500/20 rounded-lg transition-colors text-gray-400 hover:text-blue-500" 
+                                title="Edit Trade"
                               >
-                                <XCircle size={16} />
+                                <Edit size={16} />
                               </button>
-                            )}
-                          </div>
-                        )}
+                              {trade.status === 'OPEN' && (
+                                <button 
+                                  type="button"
+                                  onClick={() => openCloseModal(trade)}
+                                  className="p-2 hover:bg-red-500/20 rounded-lg transition-colors text-gray-400 hover:text-red-500" 
+                                  title="Close Trade"
+                                >
+                                  <XCircle size={16} />
+                                </button>
+                              )}
+                            </>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -760,6 +805,16 @@ const AdminTradeManagement = () => {
           </>
         )}
       </div>
+
+      {showTradeDetailModal && detailTrade && (
+        <AdminTradeDetailModal
+          trade={detailTrade}
+          isDarkMode={isDarkMode}
+          livePrices={livePrices}
+          onClose={() => { setShowTradeDetailModal(false); setDetailTrade(null); }}
+          calculateFloatingPnl={calculateFloatingPnl}
+        />
+      )}
 
       {/* Create Trade Modal */}
       {showCreateModal && (
@@ -1173,6 +1228,132 @@ const AdminTradeManagement = () => {
         </div>
       )}
     </AdminLayout>
+  )
+}
+
+function AdminTradeDetailModal({ trade: d, isDarkMode, livePrices, onClose, calculateFloatingPnl }) {
+  const lp = livePrices[d.symbol]
+  const sl = effectiveStopLoss(d)
+  const tp = effectiveTakeProfit(d)
+  const borderB = isDarkMode ? 'border-gray-700' : 'border-gray-200'
+  const labelCls = isDarkMode ? 'text-gray-500' : 'text-gray-600'
+  const valCls = isDarkMode ? 'text-white' : 'text-gray-900'
+  const Row = ({ label, value, valueClass = '' }) => (
+    <div className={`flex justify-between gap-4 py-2.5 border-b ${borderB}`}>
+      <span className={`text-sm shrink-0 ${labelCls}`}>{label}</span>
+      <span className={`text-sm text-right font-medium break-all ${valCls} ${valueClass}`}>{value}</span>
+    </div>
+  )
+  const lev = typeof d.leverage === 'number' ? `1:${d.leverage}` : String(d.leverage || '—')
+  const pnlVal = d.status === 'OPEN' ? calculateFloatingPnl(d) : (d.realizedPnl ?? 0)
+  const userName = d.userId?.firstName || d.userId?.lastName
+    ? `${d.userId?.firstName || ''} ${d.userId?.lastName || ''}`.trim()
+    : (d.userId?.email || '—')
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4 overflow-y-auto">
+      <div className={`rounded-2xl w-full max-w-lg max-h-[90vh] my-4 flex flex-col shadow-xl ${isDarkMode ? 'bg-dark-800 border border-gray-800' : 'bg-white border border-gray-200'}`}>
+        <div className={`p-4 sm:p-5 border-b flex items-start justify-between gap-3 shrink-0 ${borderB}`}>
+          <div>
+            <h2 className={`text-lg font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Trade details</h2>
+            <p className={`font-mono text-sm mt-1 ${labelCls}`}>{d.tradeId}</p>
+            <p className={`text-sm font-medium ${valCls}`}>{d.symbol} · {d.side} · {d.quantity} lots</p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className={`p-2 rounded-lg shrink-0 ${isDarkMode ? 'hover:bg-dark-700 text-gray-400' : 'hover:bg-gray-100 text-gray-500'}`}
+            aria-label="Close"
+          >
+            <X size={22} />
+          </button>
+        </div>
+        <div className="p-4 sm:p-5 overflow-y-auto flex-1 space-y-5">
+          <div>
+            <p className={`text-xs font-semibold uppercase tracking-wide mb-2 ${labelCls}`}>Account & user</p>
+            <Row label="User" value={userName} />
+            <Row label="Email" value={d.userId?.email || '—'} />
+            <Row label="User ID" value={d.userId?._id ? String(d.userId._id) : '—'} />
+            <Row label="Trading account" value={d.tradingAccountId?.accountId || (d.tradingAccountId?._id ? String(d.tradingAccountId._id) : '—')} />
+          </div>
+          <div>
+            <p className={`text-xs font-semibold uppercase tracking-wide mb-2 ${labelCls}`}>Instrument & order</p>
+            <Row label="Segment" value={d.segment || '—'} />
+            <Row label="Order type" value={d.orderType || '—'} />
+            <Row label="Status" value={d.status || '—'} />
+            <Row label="Book" value={d.bookType === 'A' ? 'A-Book' : d.bookType === 'B' ? 'B-Book' : '—'} />
+            {d.status === 'PENDING' && d.pendingPrice != null && (
+              <Row label="Pending price" value={formatHistoryPrice(d.symbol, d.pendingPrice)} />
+            )}
+          </div>
+          <div>
+            <p className={`text-xs font-semibold uppercase tracking-wide mb-2 ${labelCls}`}>Prices</p>
+            <Row label="Open price" value={formatHistoryPrice(d.symbol, d.openPrice)} />
+            <Row label="Close price" value={d.status === 'CLOSED' && d.closePrice != null ? formatHistoryPrice(d.symbol, d.closePrice) : '—'} />
+            {d.status === 'OPEN' && lp?.bid != null && (
+              <>
+                <Row label="Live bid" value={formatHistoryPrice(d.symbol, lp.bid)} />
+                <Row label="Live ask" value={formatHistoryPrice(d.symbol, lp.ask ?? lp.bid)} />
+                {lp.ask != null && lp.bid != null && (
+                  <Row label="Market spread (price)" value={formatHistoryPrice(d.symbol, Math.abs(lp.ask - lp.bid))} />
+                )}
+              </>
+            )}
+          </div>
+          <div>
+            <p className={`text-xs font-semibold uppercase tracking-wide mb-2 ${labelCls}`}>Stop loss & take profit</p>
+            <Row label="Stop loss" value={sl != null ? formatHistoryPrice(d.symbol, sl) : '—'} />
+            <Row label="Take profit" value={tp != null ? formatHistoryPrice(d.symbol, tp) : '—'} />
+          </div>
+          <div>
+            <p className={`text-xs font-semibold uppercase tracking-wide mb-2 ${labelCls}`}>Charges & size</p>
+            <Row label="Spread cost (USD)" value={`$${Number(d.spread ?? 0).toFixed(2)}`} />
+            <p className={`text-[11px] -mt-1 mb-2 ${labelCls}`}>Recorded spread cost at open (account currency)</p>
+            <Row label="Commission" value={`$${Number(d.commission ?? 0).toFixed(2)}`} />
+            <Row label="Swap" value={`$${Number(d.swap ?? 0).toFixed(2)}`} />
+            <Row label="Contract size" value={d.contractSize != null ? String(d.contractSize) : '—'} />
+            <Row label="Leverage" value={lev} />
+            <Row label="Margin used" value={d.marginUsed != null ? `$${Number(d.marginUsed).toFixed(2)}` : '—'} />
+          </div>
+          <div>
+            <p className={`text-xs font-semibold uppercase tracking-wide mb-2 ${labelCls}`}>P&amp;L</p>
+            <Row
+              label={d.status === 'OPEN' ? 'Floating P&L (est.)' : 'Realized P&L'}
+              value={`${pnlVal >= 0 ? '+' : ''}$${Number(pnlVal).toFixed(2)}`}
+              valueClass={pnlVal >= 0 ? 'text-green-500' : 'text-red-500'}
+            />
+          </div>
+          {d.status === 'CLOSED' && (
+            <div>
+              <p className={`text-xs font-semibold uppercase tracking-wide mb-2 ${labelCls}`}>Close info</p>
+              <Row label="Exit" value={closeReasonLabel(d.closedBy)} />
+              <Row label="Closed at" value={d.closedAt ? new Date(d.closedAt).toLocaleString() : '—'} />
+            </div>
+          )}
+          <div>
+            <p className={`text-xs font-semibold uppercase tracking-wide mb-2 ${labelCls}`}>Time</p>
+            <Row label="Opened at" value={d.openedAt ? new Date(d.openedAt).toLocaleString() : '—'} />
+          </div>
+          <div>
+            <p className={`text-xs font-semibold uppercase tracking-wide mb-2 ${labelCls}`}>Flags</p>
+            <Row label="Copy trade" value={d.isCopyTrade ? 'Yes' : 'No'} />
+            {d.isCopyTrade && d.masterTradeId && (
+              <Row label="Master trade ID" value={String(d.masterTradeId)} />
+            )}
+            <Row label="Admin modified" value={d.adminModified ? 'Yes' : 'No'} />
+          </div>
+        </div>
+        <div className={`p-4 border-t shrink-0 ${borderB}`}>
+          <button
+            type="button"
+            onClick={onClose}
+            className={`w-full py-3 rounded-xl text-sm font-medium ${isDarkMode ? 'bg-dark-700 hover:bg-dark-600 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-900'}`}
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
   )
 }
 

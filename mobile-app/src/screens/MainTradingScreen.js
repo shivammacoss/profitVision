@@ -27,6 +27,12 @@ import { WebView } from 'react-native-webview';
 import * as SecureStore from 'expo-secure-store';
 import { API_URL } from '../config';
 import { useTheme } from '../context/ThemeContext';
+import {
+  effectiveStopLoss,
+  effectiveTakeProfit,
+  closeReasonLabel,
+  formatHistoryPrice,
+} from '../utils/tradeHistoryDisplay';
 
 const Tab = createBottomTabNavigator();
 const { width, height } = Dimensions.get('window');
@@ -1601,7 +1607,16 @@ const TradeTab = () => {
               <Text style={styles.emptyText}>No trade history</Text>
             </View>
           ) : (
-            ctx.tradeHistory.map(trade => (
+            ctx.tradeHistory.map(trade => {
+              const sl = effectiveStopLoss(trade);
+              const tp = effectiveTakeProfit(trade);
+              const exitColor =
+                trade.closedBy === 'SL' ? '#f87171'
+                : trade.closedBy === 'TP' ? '#4ade80'
+                : trade.closedBy === 'STOP_OUT' ? '#fb923c'
+                : trade.closedBy === 'ADMIN' ? '#fbbf24'
+                : '#888';
+              return (
               <TouchableOpacity 
                 key={trade._id} 
                 style={styles.historyItem}
@@ -1625,8 +1640,17 @@ const TradeTab = () => {
                   <Text style={styles.historyDetail}>{trade.quantity} lots</Text>
                   <Text style={styles.historyDetail}>{new Date(trade.closedAt).toLocaleDateString()}</Text>
                 </View>
+                <Text style={[styles.historyDetail, { marginTop: 4 }]}>
+                  SL {sl != null ? formatHistoryPrice(trade.symbol, sl) : '—'}
+                  {trade.closedBy === 'SL' && sl != null ? ' · hit' : ''}
+                  {'  ·  '}
+                  TP {tp != null ? formatHistoryPrice(trade.symbol, tp) : '—'}
+                  {trade.closedBy === 'TP' && tp != null ? ' · hit' : ''}
+                </Text>
+                <Text style={[styles.historyExitLine, { color: exitColor }]}>{closeReasonLabel(trade.closedBy)}</Text>
               </TouchableOpacity>
-            ))
+              );
+            })
           )
         )}
       </ScrollView>
@@ -1923,12 +1947,21 @@ const TradeTab = () => {
                     <Text style={styles.detailLabel}>Order Type</Text>
                     <Text style={styles.detailValue}>{historyDetailTrade.orderType}</Text>
                   </View>
-                  {historyDetailTrade.closedBy === 'ADMIN' && (
-                    <View style={styles.detailRow}>
-                      <Text style={styles.detailLabel}>Closed By</Text>
-                      <Text style={[styles.detailValue, { color: '#d4af37' }]}>Admin</Text>
-                    </View>
-                  )}
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Exit</Text>
+                    <Text style={[
+                      styles.detailValue,
+                      {
+                        color: historyDetailTrade.closedBy === 'SL' ? '#f87171'
+                          : historyDetailTrade.closedBy === 'TP' ? '#4ade80'
+                          : historyDetailTrade.closedBy === 'STOP_OUT' ? '#fb923c'
+                          : historyDetailTrade.closedBy === 'ADMIN' ? '#fbbf24'
+                          : '#888',
+                      },
+                    ]}>
+                      {closeReasonLabel(historyDetailTrade.closedBy)}
+                    </Text>
+                  </View>
                 </View>
 
                 {/* Position Details */}
@@ -1960,15 +1993,21 @@ const TradeTab = () => {
                 <View style={styles.detailSection}>
                   <Text style={styles.detailSectionTitle}>Stop Loss / Take Profit</Text>
                   <View style={styles.detailRow}>
-                    <Text style={styles.detailLabel}>Stop Loss</Text>
-                    <Text style={[styles.detailValue, { color: historyDetailTrade.stopLoss ? '#d4af37' : '#666' }]}>
-                      {historyDetailTrade.stopLoss || 'Not Set'}
+                    <Text style={styles.detailLabel}>Stop Loss (set)</Text>
+                    <Text style={[styles.detailValue, { color: effectiveStopLoss(historyDetailTrade) != null ? '#d4af37' : '#666' }]}>
+                      {effectiveStopLoss(historyDetailTrade) != null
+                        ? formatHistoryPrice(historyDetailTrade.symbol, effectiveStopLoss(historyDetailTrade))
+                        : 'Not set'}
+                      {historyDetailTrade.closedBy === 'SL' && effectiveStopLoss(historyDetailTrade) != null ? ' — hit' : ''}
                     </Text>
                   </View>
                   <View style={styles.detailRow}>
-                    <Text style={styles.detailLabel}>Take Profit</Text>
-                    <Text style={[styles.detailValue, { color: historyDetailTrade.takeProfit ? '#d4af37' : '#666' }]}>
-                      {historyDetailTrade.takeProfit || 'Not Set'}
+                    <Text style={styles.detailLabel}>Take profit (set)</Text>
+                    <Text style={[styles.detailValue, { color: effectiveTakeProfit(historyDetailTrade) != null ? '#d4af37' : '#666' }]}>
+                      {effectiveTakeProfit(historyDetailTrade) != null
+                        ? formatHistoryPrice(historyDetailTrade.symbol, effectiveTakeProfit(historyDetailTrade))
+                        : 'Not set'}
+                      {historyDetailTrade.closedBy === 'TP' && effectiveTakeProfit(historyDetailTrade) != null ? ' — hit' : ''}
                     </Text>
                   </View>
                 </View>
@@ -2063,7 +2102,16 @@ const HistoryTab = () => {
           <Text style={styles.emptyText}>No trade history</Text>
         </View>
       }
-      renderItem={({ item }) => (
+      renderItem={({ item }) => {
+        const sl = effectiveStopLoss(item);
+        const tp = effectiveTakeProfit(item);
+        const exitColor =
+          item.closedBy === 'SL' ? '#f87171'
+          : item.closedBy === 'TP' ? '#4ade80'
+          : item.closedBy === 'STOP_OUT' ? '#fb923c'
+          : item.closedBy === 'ADMIN' ? '#fbbf24'
+          : '#888';
+        return (
         <View style={styles.historyItemFull}>
           <View style={styles.historyHeader}>
             <View style={styles.historyLeft}>
@@ -2083,12 +2131,21 @@ const HistoryTab = () => {
           </View>
           <View style={styles.historyMeta}>
             <Text style={styles.historyMetaText}>{item.quantity} lots</Text>
-            <Text style={styles.historyMetaText}>Open: {item.openPrice?.toFixed(5)}</Text>
-            <Text style={styles.historyMetaText}>Close: {item.closePrice?.toFixed(5)}</Text>
+            <Text style={styles.historyMetaText}>Open: {formatHistoryPrice(item.symbol, item.openPrice)}</Text>
+            <Text style={styles.historyMetaText}>Close: {formatHistoryPrice(item.symbol, item.closePrice)}</Text>
           </View>
+          <Text style={[styles.historyMetaText, { marginTop: 6 }]}>
+            SL: {sl != null ? formatHistoryPrice(item.symbol, sl) : '—'}
+            {item.closedBy === 'SL' && sl != null ? ' (hit)' : ''}
+            {'   TP: '}
+            {tp != null ? formatHistoryPrice(item.symbol, tp) : '—'}
+            {item.closedBy === 'TP' && tp != null ? ' (hit)' : ''}
+          </Text>
+          <Text style={[styles.historyExitLine, { color: exitColor }]}>{closeReasonLabel(item.closedBy)}</Text>
           <Text style={styles.historyDate}>{new Date(item.closedAt).toLocaleDateString()}</Text>
         </View>
-      )}
+        );
+      }}
     />
   );
 };
@@ -3067,6 +3124,7 @@ const styles = StyleSheet.create({
   historyItem: { padding: 12, borderBottomWidth: 1, borderBottomColor: '#000000' },
   historyDetails: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
   historyDetail: { color: '#666', fontSize: 12 },
+  historyExitLine: { fontSize: 12, fontWeight: '600', marginTop: 4 },
   adminBadge: { backgroundColor: '#d4af3720', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4 },
   adminBadgeText: { color: '#d4af37', fontSize: 10 },
   

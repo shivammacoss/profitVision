@@ -13,6 +13,12 @@ import { useTheme } from '../context/ThemeContext'
 import logo from '../assets/logo.png'
 
 import { API_URL } from '../config/api'
+import {
+  effectiveStopLoss,
+  effectiveTakeProfit,
+  closeReasonLabel,
+  formatHistoryPrice,
+} from '../utils/tradeHistoryDisplay'
 
 const MobileTradingApp = () => {
   const navigate = useNavigate()
@@ -1084,10 +1090,24 @@ const MobileTradingApp = () => {
             </div>
           ) : (
             <div className={colors.divide}>
-              {tradeHistory.map(trade => (
+              {tradeHistory.map(trade => {
+                const sl = effectiveStopLoss(trade)
+                const tp = effectiveTakeProfit(trade)
+                const exit = closeReasonLabel(trade.closedBy)
+                const exitClass =
+                  trade.closedBy === 'SL'
+                    ? 'text-red-400'
+                    : trade.closedBy === 'TP'
+                      ? 'text-green-500'
+                      : trade.closedBy === 'STOP_OUT'
+                        ? 'text-orange-400'
+                        : trade.closedBy === 'ADMIN'
+                          ? 'text-amber-500'
+                          : colors.textMuted
+                return (
                 <div key={trade._id} className={`p-4 ${colors.bgCard} border-b ${colors.border}`}>
                   <div className="flex items-center justify-between mb-1">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span className={`${colors.textPrimary} font-medium`}>{trade.symbol}</span>
                       <span className={`text-xs ${trade.side === 'BUY' ? 'text-green-500' : 'text-red-500'}`}>
                         {trade.side}
@@ -1102,12 +1122,16 @@ const MobileTradingApp = () => {
                       {trade.realizedPnl >= 0 ? '+' : ''}${trade.realizedPnl?.toFixed(2)}
                     </span>
                   </div>
-                  <div className={`flex items-center justify-between text-xs ${colors.textMuted}`}>
+                  <div className={`grid grid-cols-2 gap-x-3 gap-y-1 text-xs ${colors.textMuted}`}>
                     <span>{trade.quantity} lots</span>
-                    <span>{new Date(trade.closedAt).toLocaleDateString()}</span>
+                    <span className="text-right">{new Date(trade.closedAt).toLocaleDateString()}</span>
+                    <span>SL: {sl != null ? formatHistoryPrice(trade.symbol, sl) : '—'}{trade.closedBy === 'SL' && sl != null ? ' (hit)' : ''}</span>
+                    <span className="text-right">TP: {tp != null ? formatHistoryPrice(trade.symbol, tp) : '—'}{trade.closedBy === 'TP' && tp != null ? ' (hit)' : ''}</span>
                   </div>
+                  <div className={`text-xs mt-2 font-medium ${exitClass}`}>{exit}</div>
                 </div>
-              ))}
+                )
+              })}
             </div>
           )
         )}

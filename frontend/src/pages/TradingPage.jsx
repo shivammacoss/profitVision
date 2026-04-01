@@ -7,6 +7,12 @@ import priceStreamService from '../services/priceStream'
 import { useTheme } from '../context/ThemeContext'
 
 import { API_URL } from '../config/api'
+import {
+  effectiveStopLoss,
+  effectiveTakeProfit,
+  closeReasonLabel,
+  formatHistoryPrice,
+} from '../utils/tradeHistoryDisplay'
 
 const TradingPage = () => {
   const navigate = useNavigate()
@@ -1543,41 +1549,65 @@ const TradingPage = () => {
                     <th className="text-left py-2 px-3 font-normal">Lots</th>
                     <th className="text-left py-2 px-3 font-normal">Entry</th>
                     <th className="text-left py-2 px-3 font-normal">Close</th>
+                    <th className="text-left py-2 px-3 font-normal">Stop loss</th>
+                    <th className="text-left py-2 px-3 font-normal">Take profit</th>
                     <th className="text-left py-2 px-3 font-normal">Charges</th>
                     <th className="text-left py-2 px-3 font-normal">Swap</th>
                     <th className="text-left py-2 px-3 font-normal">P/L</th>
-                    <th className="text-left py-2 px-3 font-normal">Closed By</th>
+                    <th className="text-left py-2 px-3 font-normal">Exit</th>
                   </tr>
                 </thead>
                 <tbody>
                   {tradeHistory.length === 0 ? (
                     <tr>
-                      <td colSpan="10" className="text-center py-8 text-gray-500">No trade history</td>
+                      <td colSpan="12" className="text-center py-8 text-gray-500">No trade history</td>
                     </tr>
                   ) : (
                     tradeHistory.map(trade => {
-                      const formatPrice = (price) => {
-                        if (!price) return '-'
-                        if (trade.symbol.includes('JPY')) return price.toFixed(3)
-                        if (['BTCUSD', 'ETHUSD', 'XAUUSD'].includes(trade.symbol)) return price.toFixed(2)
-                        if (['XAGUSD'].includes(trade.symbol)) return price.toFixed(4)
-                        return price.toFixed(5)
-                      }
-                      
+                      const sl = effectiveStopLoss(trade)
+                      const tp = effectiveTakeProfit(trade)
+                      const exitReason = closeReasonLabel(trade.closedBy)
+                      const exitTone =
+                        trade.closedBy === 'SL'
+                          ? 'text-red-400'
+                          : trade.closedBy === 'TP'
+                            ? 'text-green-500'
+                            : trade.closedBy === 'STOP_OUT'
+                              ? 'text-orange-400'
+                              : trade.closedBy === 'ADMIN'
+                                ? 'text-amber-500'
+                                : isDarkMode
+                                  ? 'text-gray-400'
+                                  : 'text-gray-600'
+
                       return (
                         <tr key={trade._id} className={`border-t ${isDarkMode ? 'border-gray-800 hover:bg-[#1a1a1a]' : 'border-gray-200 hover:bg-gray-50'}`}>
                           <td className={`py-2 px-3 text-xs ${isDarkMode ? '' : 'text-gray-700'}`}>{new Date(trade.closedAt).toLocaleString()}</td>
                           <td className={`py-2 px-3 text-xs font-medium ${isDarkMode ? '' : 'text-gray-900'}`}>{trade.symbol}</td>
                           <td className={`py-2 px-3 text-xs font-medium ${trade.side === 'BUY' ? 'text-blue-500' : 'text-red-500'}`}>{trade.side}</td>
                           <td className={`py-2 px-3 text-xs ${isDarkMode ? '' : 'text-gray-700'}`}>{trade.quantity}</td>
-                          <td className={`py-2 px-3 text-xs ${isDarkMode ? '' : 'text-gray-700'}`}>{formatPrice(trade.openPrice)}</td>
-                          <td className={`py-2 px-3 text-xs ${isDarkMode ? '' : 'text-gray-700'}`}>{formatPrice(trade.closePrice)}</td>
+                          <td className={`py-2 px-3 text-xs ${isDarkMode ? '' : 'text-gray-700'}`}>{formatHistoryPrice(trade.symbol, trade.openPrice)}</td>
+                          <td className={`py-2 px-3 text-xs ${isDarkMode ? '' : 'text-gray-700'}`}>{formatHistoryPrice(trade.symbol, trade.closePrice)}</td>
+                          <td className={`py-2 px-3 text-xs ${isDarkMode ? '' : 'text-gray-700'}`}>
+                            <span>{sl != null ? formatHistoryPrice(trade.symbol, sl) : '—'}</span>
+                            {trade.closedBy === 'SL' && sl != null && (
+                              <span className="ml-1 text-[10px] uppercase tracking-wide text-red-400">hit</span>
+                            )}
+                          </td>
+                          <td className={`py-2 px-3 text-xs ${isDarkMode ? '' : 'text-gray-700'}`}>
+                            <span>{tp != null ? formatHistoryPrice(trade.symbol, tp) : '—'}</span>
+                            {trade.closedBy === 'TP' && tp != null && (
+                              <span className="ml-1 text-[10px] uppercase tracking-wide text-green-500">hit</span>
+                            )}
+                          </td>
                           <td className={`py-2 px-3 text-xs ${isDarkMode ? '' : 'text-gray-700'}`}>${trade.commission?.toFixed(2) || '0.00'}</td>
                           <td className={`py-2 px-3 text-xs ${isDarkMode ? '' : 'text-gray-700'}`}>${trade.swap?.toFixed(2) || '0.00'}</td>
                           <td className={`py-2 px-3 text-xs font-medium ${trade.realizedPnl >= 0 ? 'text-green-500' : 'text-red-500'}`}>
                             ${trade.realizedPnl?.toFixed(2) || '0.00'}
                           </td>
-                          <td className={`py-2 px-3 text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>{trade.closedBy || 'USER'}</td>
+                          <td className={`py-2 px-3 text-xs ${exitTone}`}>
+                            <span className="font-medium">{exitReason}</span>
+                          </td>
                         </tr>
                       )
                     })
