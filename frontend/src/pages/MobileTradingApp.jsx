@@ -19,6 +19,7 @@ import {
   closeReasonLabel,
   formatHistoryPrice,
 } from '../utils/tradeHistoryDisplay'
+import { validateSlTpPlacement } from '../utils/slTpValidation'
 
 const MobileTradingApp = () => {
   const navigate = useNavigate()
@@ -345,6 +346,16 @@ const MobileTradingApp = () => {
     }
 
     try {
+      const entryRef = orderSide === 'BUY' ? prices.ask : prices.bid
+      const slV = stopLoss ? parseFloat(stopLoss) : null
+      const tpV = takeProfit ? parseFloat(takeProfit) : null
+      const appSlTp = validateSlTpPlacement(orderSide, entryRef, slV, tpV)
+      if (appSlTp) {
+        showNotification(appSlTp, 'error')
+        setIsExecuting(false)
+        return
+      }
+
       const res = await fetch(`${API_URL}/trade/open`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -358,8 +369,8 @@ const MobileTradingApp = () => {
           quantity: parseFloat(volume),
           bid: prices.bid,
           ask: prices.ask,
-          sl: stopLoss ? parseFloat(stopLoss) : null,
-          tp: takeProfit ? parseFloat(takeProfit) : null
+          sl: slV,
+          tp: tpV
         })
       })
       const data = await res.json()
@@ -442,13 +453,22 @@ const MobileTradingApp = () => {
     setIsModifying(true)
 
     try {
+      const slMv = modifySL ? parseFloat(modifySL) : null
+      const tpMv = modifyTP ? parseFloat(modifyTP) : null
+      const modV = validateSlTpPlacement(selectedTradeForModify.side, selectedTradeForModify.openPrice, slMv, tpMv)
+      if (modV) {
+        showNotification(modV, 'error')
+        setIsModifying(false)
+        return
+      }
+
       const res = await fetch(`${API_URL}/trade/modify`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           tradeId: selectedTradeForModify._id,
-          sl: modifySL ? parseFloat(modifySL) : null,
-          tp: modifyTP ? parseFloat(modifyTP) : null
+          sl: slMv,
+          tp: tpMv
         })
       })
       const data = await res.json()

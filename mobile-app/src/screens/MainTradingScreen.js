@@ -33,6 +33,7 @@ import {
   closeReasonLabel,
   formatHistoryPrice,
 } from '../utils/tradeHistoryDisplay';
+import { validateSlTpPlacement } from '../utils/slTpValidation';
 
 const Tab = createBottomTabNavigator();
 const { width, height } = Dimensions.get('window');
@@ -737,8 +738,23 @@ const QuotesTab = ({ navigation }) => {
       };
       
       // Add SL/TP if set
-      if (stopLoss) orderData.sl = parseFloat(stopLoss);
-      if (takeProfit) orderData.tp = parseFloat(takeProfit);
+      const slOrd = stopLoss ? parseFloat(stopLoss) : null;
+      const tpOrd = takeProfit ? parseFloat(takeProfit) : null;
+      if (slOrd != null) orderData.sl = slOrd;
+      if (tpOrd != null) orderData.tp = tpOrd;
+
+      const entryForSlTp =
+        orderType === 'PENDING' && pendingPrice
+          ? parseFloat(pendingPrice)
+          : orderSide === 'BUY'
+            ? parseFloat(finalAsk)
+            : parseFloat(finalBid);
+      const slTpCheck = validateSlTpPlacement(orderSide, entryForSlTp, slOrd, tpOrd);
+      if (slTpCheck) {
+        toast?.showToast(slTpCheck, 'error');
+        setIsExecuting(false);
+        return;
+      }
 
       console.log('Trade order data:', JSON.stringify(orderData, null, 2));
       
@@ -1363,8 +1379,10 @@ const TradeTab = () => {
 
   const openSlTpModal = (trade) => {
     setSelectedTrade(trade);
-    setStopLoss(trade.stopLoss ? trade.stopLoss.toString() : '');
-    setTakeProfit(trade.takeProfit ? trade.takeProfit.toString() : '');
+    const slShow = trade.stopLoss ?? trade.sl;
+    const tpShow = trade.takeProfit ?? trade.tp;
+    setStopLoss(slShow != null ? String(slShow) : '');
+    setTakeProfit(tpShow != null ? String(tpShow) : '');
     setShowSlTpModal(true);
   };
 
@@ -1373,6 +1391,12 @@ const TradeTab = () => {
     try {
       const slValue = stopLoss && stopLoss.trim() !== '' ? parseFloat(stopLoss) : null;
       const tpValue = takeProfit && takeProfit.trim() !== '' ? parseFloat(takeProfit) : null;
+
+      const updErr = validateSlTpPlacement(selectedTrade.side, selectedTrade.openPrice, slValue, tpValue);
+      if (updErr) {
+        toast?.showToast(updErr, 'error');
+        return;
+      }
       
       console.log('Updating SL/TP:', { tradeId: selectedTrade._id, sl: slValue, tp: tpValue });
       

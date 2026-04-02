@@ -13,6 +13,7 @@ import {
   closeReasonLabel,
   formatHistoryPrice,
 } from '../utils/tradeHistoryDisplay'
+import { validateSlTpPlacement } from '../utils/slTpValidation'
 
 const TradingPage = () => {
   const navigate = useNavigate()
@@ -624,6 +625,16 @@ const TradingPage = () => {
         setIsExecutingTrade(false)
         return
       }
+
+      const entryRef = side === 'BUY' ? ask : bid
+      const slVal = showStopLoss && stopLoss ? parseFloat(stopLoss) : null
+      const tpVal = showTakeProfit && takeProfit ? parseFloat(takeProfit) : null
+      const slTpMsg = validateSlTpPlacement(side, entryRef, slVal, tpVal)
+      if (slTpMsg) {
+        setTradeError(slTpMsg)
+        setIsExecutingTrade(false)
+        return
+      }
       
       const res = await fetch(`${API_URL}/trade/open`, {
         method: 'POST',
@@ -639,8 +650,8 @@ const TradingPage = () => {
           bid,
           ask,
           leverage: leverage, // Send selected leverage
-          sl: showStopLoss && stopLoss ? parseFloat(stopLoss) : null,
-          tp: showTakeProfit && takeProfit ? parseFloat(takeProfit) : null
+          sl: slVal,
+          tp: tpVal
         })
       })
 
@@ -706,6 +717,18 @@ const TradingPage = () => {
       const livePrice = livePrices[selectedInstrument.symbol]
       const currentBid = livePrice?.bid || selectedInstrument.bid
       const currentAsk = livePrice?.ask || selectedInstrument.ask
+
+      const entryRef = pendingPrice != null && !isNaN(pendingPrice)
+        ? pendingPrice
+        : (side === 'BUY' ? currentAsk : currentBid)
+      const slP = showStopLoss && stopLoss ? parseFloat(stopLoss) : null
+      const tpP = showTakeProfit && takeProfit ? parseFloat(takeProfit) : null
+      const pendSlTp = validateSlTpPlacement(side, entryRef, slP, tpP)
+      if (pendSlTp) {
+        setTradeError(pendSlTp)
+        setIsExecutingTrade(false)
+        return
+      }
       
       const res = await fetch(`${API_URL}/trade/open`, {
         method: 'POST',
@@ -720,8 +743,8 @@ const TradingPage = () => {
           quantity: parseFloat(volume),
           bid: pendingPrice || currentBid,
           ask: pendingPrice || currentAsk,
-          sl: showStopLoss && stopLoss ? parseFloat(stopLoss) : null,
-          tp: showTakeProfit && takeProfit ? parseFloat(takeProfit) : null
+          sl: slP,
+          tp: tpP
         })
       })
 
@@ -843,10 +866,19 @@ const TradingPage = () => {
     setTradeError('') // Clear any previous error
 
     try {
+      const slM = modifySL ? parseFloat(modifySL) : null
+      const tpM = modifyTP ? parseFloat(modifyTP) : null
+      const modErr = validateSlTpPlacement(selectedTradeForModify.side, selectedTradeForModify.openPrice, slM, tpM)
+      if (modErr) {
+        setTradeError(modErr)
+        setTimeout(() => setTradeError(''), 4000)
+        return
+      }
+
       const requestBody = {
         tradeId: selectedTradeForModify._id,
-        sl: modifySL ? parseFloat(modifySL) : null,
-        tp: modifyTP ? parseFloat(modifyTP) : null
+        sl: slM,
+        tp: tpM
       }
       console.log('Request body:', JSON.stringify(requestBody))
 

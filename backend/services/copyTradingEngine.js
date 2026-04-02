@@ -581,7 +581,7 @@ class CopyTradingEngine {
     // Process ALL in parallel
     const results = await Promise.all(copyTrades.map(async (copyTrade) => {
       try {
-        await tradeEngine.modifyTrade(copyTrade.followerTradeId, newSl, newTp)
+        await tradeEngine.modifyTrade(copyTrade.followerTradeId, newSl, newTp, null, { skipSlTpValidation: true })
         // Also update the CopyTrade record with new SL/TP for follower display
         await CopyTrade.findByIdAndUpdate(copyTrade._id, {
           masterStopLoss: newSl,

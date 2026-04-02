@@ -8,6 +8,7 @@ import AdminLog from '../models/AdminLog.js'
 import tradeEngine from '../services/tradeEngine.js'
 import copyTradingEngine from '../services/copyTradingEngine.js'
 import MasterTrader from '../models/MasterTrader.js'
+import { validateSlTpPlacement } from '../utils/slTpValidation.js'
 
 const router = express.Router()
 
@@ -66,6 +67,11 @@ router.post('/create', async (req, res) => {
     const leverageNum = parseInt(leverage.toString().replace('1:', '')) || 100
     const marginRequired = (quantity * contractSize * openPrice) / leverageNum
 
+    const slTpErr = validateSlTpPlacement(side, openPrice, stopLoss, takeProfit)
+    if (slTpErr) {
+      return res.status(400).json({ success: false, message: slTpErr })
+    }
+
     // Generate trade ID
     const tradeId = await Trade.generateTradeId()
 
@@ -121,8 +127,20 @@ router.put('/modify/:tradeId', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Trade is not open' })
     }
 
-    if (stopLoss !== undefined) trade.stopLoss = stopLoss
-    if (takeProfit !== undefined) trade.takeProfit = takeProfit
+    if (stopLoss !== undefined) {
+      trade.stopLoss = stopLoss
+      trade.sl = stopLoss
+    }
+    if (takeProfit !== undefined) {
+      trade.takeProfit = takeProfit
+      trade.tp = takeProfit
+    }
+
+    const slTpErr = validateSlTpPlacement(trade.side, trade.openPrice, trade.stopLoss, trade.takeProfit)
+    if (slTpErr) {
+      return res.status(400).json({ success: false, message: slTpErr })
+    }
+
     trade.adminModified = true
     trade.adminModifiedAt = new Date()
 
@@ -220,6 +238,13 @@ router.put('/edit/:tradeId', async (req, res) => {
 
     trade.adminModified = true
     trade.adminModifiedAt = new Date()
+
+    if (trade.status === 'OPEN') {
+      const slTpErr = validateSlTpPlacement(trade.side, trade.openPrice, trade.stopLoss, trade.takeProfit)
+      if (slTpErr) {
+        return res.status(400).json({ success: false, message: slTpErr })
+      }
+    }
 
     await trade.save()
 

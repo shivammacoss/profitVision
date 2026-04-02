@@ -7,6 +7,7 @@ import User from '../models/User.js'
 import ibEngine from './ibEngineNew.js'
 import referralEngine from './referralEngine.js'
 import lpService from './lpService.js'
+import { validateSlTpPlacement } from '../utils/slTpValidation.js'
 
 class TradeEngine {
   constructor() {
@@ -342,6 +343,9 @@ class TradeEngine {
     const finalOpenPrice = (orderType !== 'MARKET' && entryPrice) ? entryPrice : openPrice
     const finalPendingPrice = orderType !== 'MARKET' ? (entryPrice || openPrice) : null
 
+    const slTpErr = validateSlTpPlacement(side, finalOpenPrice, sl, tp)
+    if (slTpErr) throw new Error(slTpErr)
+
     // Get user's book type (A or B) and name for LP push
     const user = await User.findById(userId).select('bookType firstName email')
     const userBookType = user?.bookType || 'B'
@@ -672,7 +676,9 @@ class TradeEngine {
   }
 
   // Modify trade SL/TP
-  async modifyTrade(tradeId, sl = null, tp = null, adminId = null) {
+  // options.skipSlTpValidation: e.g. copy-trade mirror (levels already validated on master)
+  async modifyTrade(tradeId, sl = null, tp = null, adminId = null, options = {}) {
+    const { skipSlTpValidation = false } = options
     const trade = await Trade.findById(tradeId)
     if (!trade) throw new Error('Trade not found')
     if (trade.status !== 'OPEN') throw new Error('Trade is not open')
@@ -693,6 +699,11 @@ class TradeEngine {
     }
     
     console.log('Modifying trade SL/TP:', { tradeId, sl: trade.stopLoss, tp: trade.takeProfit })
+
+    if (!adminId && !skipSlTpValidation) {
+      const err = validateSlTpPlacement(trade.side, trade.openPrice, trade.stopLoss, trade.takeProfit)
+      if (err) throw new Error(err)
+    }
 
     if (adminId) {
       trade.adminModified = true

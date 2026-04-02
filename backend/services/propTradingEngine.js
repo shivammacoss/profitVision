@@ -2,6 +2,7 @@ import Challenge from '../models/Challenge.js'
 import ChallengeAccount from '../models/ChallengeAccount.js'
 import PropSettings from '../models/PropSettings.js'
 import Trade from '../models/Trade.js'
+import { validateSlTpPlacement } from '../utils/slTpValidation.js'
 
 class PropTradingEngine {
   constructor() {
@@ -20,7 +21,8 @@ class PropTradingEngine {
       MIN_HOLD_TIME: 'MIN_HOLD_TIME',
       DAILY_DRAWDOWN_BREACH: 'DAILY_DRAWDOWN_BREACH',
       OVERALL_DRAWDOWN_BREACH: 'OVERALL_DRAWDOWN_BREACH',
-      INSUFFICIENT_MARGIN: 'INSUFFICIENT_MARGIN'
+      INSUFFICIENT_MARGIN: 'INSUFFICIENT_MARGIN',
+      INVALID_SL_TP: 'INVALID_SL_TP'
     }
   }
 
@@ -197,6 +199,19 @@ class PropTradingEngine {
       }
     }
 
+    const bidN = parseFloat(tradeParams.bid)
+    const askN = parseFloat(tradeParams.ask)
+    const entry = tradeParams.side === 'BUY' ? askN : bidN
+    const slTpErr = validateSlTpPlacement(tradeParams.side, entry, tradeParams.sl, tradeParams.tp)
+    if (slTpErr) {
+      return {
+        valid: false,
+        error: slTpErr,
+        code: this.ERROR_CODES.INVALID_SL_TP,
+        uiAction: 'SHOW_SL_TP_WARNING'
+      }
+    }
+
     return { valid: true, account, challenge }
   }
 
@@ -215,6 +230,9 @@ class PropTradingEngine {
     // Calculate execution price with spread
     const { symbol, segment, side, orderType, quantity, bid, ask, sl, tp } = tradeParams
     const openPrice = side === 'BUY' ? ask : bid
+
+    const slTpErr = validateSlTpPlacement(side, openPrice, sl, tp)
+    if (slTpErr) throw new Error(slTpErr)
 
     // Get contract size based on symbol
     const contractSize = this.getContractSize(symbol)
