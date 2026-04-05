@@ -13,6 +13,7 @@ import { useTheme } from '../context/ThemeContext'
 import logo from '../assets/logo.png'
 
 import { API_URL } from '../config/api'
+import TradingViewChart from '../components/TradingViewChart'
 import {
   effectiveStopLoss,
   effectiveTakeProfit,
@@ -1221,12 +1222,10 @@ const MobileTradingApp = () => {
 
       {/* Full Screen TradingView Chart */}
       <div className={`flex-1 ${isDarkMode ? 'bg-[#0d0d0d]' : 'bg-white'} relative min-h-0`} ref={chartContainerRef}>
-        <iframe
-          key={`${activeChartTab}-${isDarkMode}`}
-          src={`https://s.tradingview.com/widgetembed/?frameElementId=tradingview_mobile&symbol=${getSymbolForTradingView(activeChartTab)}&interval=5&hidesidetoolbar=1&hidetoptoolbar=0&symboledit=1&saveimage=0&toolbarbg=${chartBg}&studies=[]&theme=${chartTheme}&style=1&timezone=Etc%2FUTC&withdateranges=0&showpopupbutton=0&studies_overrides={}&overrides={}&enabled_features=[]&disabled_features=["left_toolbar","header_fullscreen_button"]&locale=en&utm_source=localhost&utm_medium=widget_new&utm_campaign=chart`}
-          style={{ width: '100%', height: '100%', border: 'none' }}
-          allowFullScreen
-          title="TradingView Chart"
+        <TradingViewChart
+          symbol={activeChartTab}
+          theme={isDarkMode ? 'dark' : 'light'}
+          isMobile={true}
         />
       </div>
 
