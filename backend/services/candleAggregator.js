@@ -43,7 +43,10 @@ function getMidPrice(bid, ask) {
 export function processTick(symbol, bid, ask, timestampMs = Date.now()) {
   const mid = getMidPrice(bid, ask)
 
-  if (!candleBuffer[symbol]) candleBuffer[symbol] = {}
+  if (!candleBuffer[symbol]) {
+    candleBuffer[symbol] = {}
+    console.log(`[CandleAggregator] Started tracking ${symbol}`)
+  }
 
   for (const resolution of RESOLUTIONS) {
     const barTime = getBarTime(timestampMs, resolution)
@@ -91,6 +94,7 @@ export function processTick(symbol, bid, ask, timestampMs = Date.now()) {
  */
 export function processBatchTicks(ticks) {
   const now = Date.now()
+  console.log(`[CandleAggregator] Processing ${ticks.length} ticks`)
   for (const tick of ticks) {
     if (tick.bid && tick.ask && tick.symbol) {
       processTick(tick.symbol, tick.bid, tick.ask, tick.timestamp || now)
@@ -120,6 +124,7 @@ async function flushWriteQueue() {
   if (writeQueue.length === 0) return
 
   const toWrite = writeQueue.splice(0, writeQueue.length)
+  console.log(`[CandleAggregator] Writing ${toWrite.length} candles to DB`)
 
   try {
     const bulkOps = toWrite.map(candle => ({
@@ -131,6 +136,7 @@ async function flushWriteQueue() {
     }))
 
     await PriceCandle.bulkWrite(bulkOps, { ordered: false })
+    console.log(`[CandleAggregator] Successfully wrote ${toWrite.length} candles`)
   } catch (err) {
     console.error('[CandleAggregator] DB write error:', err.message)
   }

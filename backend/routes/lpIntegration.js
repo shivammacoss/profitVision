@@ -207,6 +207,8 @@ router.post('/prices/batch', validateLpRequest, (req, res) => {
       return res.status(400).json({ success: false, message: 'ticks array required' })
     }
 
+    console.log(`[LP Integration] Received ${ticks.length} ticks from broker ${brokerId}`)
+
     const now = Date.now()
 
     for (const tick of ticks) {

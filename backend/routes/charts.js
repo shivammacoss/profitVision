@@ -143,10 +143,13 @@ router.get('/history', async (req, res) => {
       .sort({ time: 1 })
       .lean()
 
+    console.log(`[Charts] DB query: ${symUp} ${mappedRes} ${candles.length} candles from ${new Date(fromSec*1000).toISOString()} to ${new Date(toSec*1000).toISOString()}`)
+
     let allCandles = candles || []
 
     // 2. If DB is empty, fetch from external source
     if (allCandles.length === 0) {
+      console.log(`[Charts] DB empty for ${symUp}, fetching external data...`)
       let externalCandles = null
 
       if (CRYPTO_SYMBOLS.has(symUp)) {
