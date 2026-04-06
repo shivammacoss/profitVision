@@ -1,10 +1,8 @@
 // Custom TradingView Datafeed
-// Historical bars: backend /api/charts/history first, fallback to Binance Klines (crypto) or TradingView demo UDF (forex/metals)
+// Historical bars: backend /api/charts/history first, fallback to Binance Klines (crypto) or Stooq (forex/metals)
 // Real-time price updates from backend Socket.IO price stream
 import priceStreamService from './priceStream'
 import { API_BASE_URL } from '../config/api'
-
-const UDF_BASE = 'https://demo-feed-data.tradingview.com'
 
 const CRYPTO_SYMBOLS = new Set([
   'BTCUSD','ETHUSD','LTCUSD','XRPUSD','BNBUSD','SOLUSD',
@@ -37,13 +35,78 @@ const resolutionToBinanceInterval = {
   'D': '1d', '1D': '1d', 'W': '1w', '1W': '1w', 'M': '1M', '1M': '1M',
 }
 
-// Map symbols to TradingView UDF equivalents for fallback (forex/metals)
-const udfSymbolMap = {
-  'XAUUSD': 'XAUUSD', 'XAGUSD': 'XAGUSD',
-  'EURUSD': 'EURUSD', 'GBPUSD': 'GBPUSD', 'USDJPY': 'USDJPY',
-  'USDCHF': 'USDCHF', 'AUDUSD': 'AUDUSD', 'NZDUSD': 'NZDUSD',
-  'USDCAD': 'USDCAD', 'EURGBP': 'EURGBP', 'EURJPY': 'EURJPY',
-  'GBPJPY': 'GBPJPY',
+// Map our symbols to Stooq symbols for forex/metals fallback
+const stooqSymbolMap = {
+  'EURUSD': 'eurusd', 'GBPUSD': 'gbpusd', 'USDJPY': 'usdjpy',
+  'USDCHF': 'usdchf', 'AUDUSD': 'audusd', 'NZDUSD': 'nzdusd',
+  'USDCAD': 'usdcad', 'EURGBP': 'eurgbp', 'EURJPY': 'eurjpy',
+  'GBPJPY': 'gbpjpy', 'EURCHF': 'eurchf', 'EURAUD': 'euraud',
+  'EURCAD': 'eurcad', 'GBPAUD': 'gbpaud', 'GBPCAD': 'gbpcad',
+  'AUDCAD': 'audcad', 'AUDJPY': 'audjpy', 'CADJPY': 'cadjpy',
+  'CHFJPY': 'chfjpy', 'NZDJPY': 'nzdjpy',
+  'XAUUSD': 'xauusd', 'XAGUSD': 'xagusd',
+}
+
+// Map TradingView resolution to Stooq interval
+const resolutionToStooqInterval = {
+  '1': '5m', '3': '5m', '5': '5m', '15': '15m', '30': '30m',
+  '60': '1h', '120': '1h', '240': '4h',
+  'D': 'd', '1D': 'd', 'W': 'w', '1W': 'w', 'M': 'm', '1M': 'm',
+}
+
+/**
+ * Fetch historical bars from Stooq for forex/metals
+ * Returns bars array or null on failure
+ */
+async function fetchStooqBars(symbol, resolution, fromSec, toSec) {
+  const stooqSymbol = stooqSymbolMap[symbol]
+  if (!stooqSymbol) return null
+
+  const interval = resolutionToStooqInterval[resolution] || 'd'
+
+  // Format dates for Stooq: YYYYMMDD
+  const fromDate = new Date(fromSec * 1000)
+  const toDate = new Date(toSec * 1000)
+  const fmt = (d) => d.toISOString().slice(0, 10).replace(/-/g, '')
+
+  try {
+    const url = `https://stooq.com/q/d/l/?s=${stooqSymbol}&d1=${fmt(fromDate)}&d2=${fmt(toDate)}&i=${interval}`
+    const resp = await fetch(url)
+    if (!resp.ok) return null
+    const text = await resp.text()
+    if (!text || text.trim() === '' || text.includes('No data')) return null
+
+    const lines = text.trim().split('\n')
+    if (lines.length < 2) return null
+
+    const bars = []
+    for (let i = 1; i < lines.length; i++) {
+      const cols = lines[i].split(',')
+      if (cols.length < 5) continue
+      const date = cols[0].replace(/-/g, '')
+      const time = cols[1] // HH:MM:SS or empty for daily
+      let ts
+      if (time && time.includes(':')) {
+        ts = new Date(`${cols[0]}T${time}Z`).getTime()
+      } else {
+        ts = new Date(`${cols[0]}T00:00:00Z`).getTime()
+      }
+      if (isNaN(ts)) continue
+      bars.push({
+        time: ts,
+        open: parseFloat(cols[2]),
+        high: parseFloat(cols[3]),
+        low: parseFloat(cols[4]),
+        close: parseFloat(cols[5] || cols[4]),
+        volume: cols[6] ? parseFloat(cols[6]) : 0,
+      })
+    }
+
+    return bars.length > 0 ? bars : null
+  } catch (err) {
+    console.error('[TVDatafeed] Stooq fetch error:', err)
+    return null
+  }
 }
 
 /**
@@ -195,26 +258,13 @@ export function createDatafeed() {
           return
         }
 
-        // Fallback: TradingView demo UDF for forex/metals
-        const udfSymbol = udfSymbolMap[symbolInfo.name] || symbolInfo.name
-        const udfUrl = `${UDF_BASE}/history?symbol=${udfSymbol}&resolution=${resolution}&from=${from}&to=${to}`
-        const udfResp = await fetch(udfUrl)
-        const udfData = await udfResp.json()
-
-        if (udfData.s === 'no_data' || !udfData.t || udfData.t.length === 0) {
-          onResult([], { noData: true })
+        // Fallback: Stooq for forex/metals
+        const stooqBars = await fetchStooqBars(symbolInfo.name, resolution, from, to)
+        if (stooqBars && stooqBars.length > 0) {
+          onResult(stooqBars, { noData: false })
           return
         }
-
-        const udfBars = udfData.t.map((time, i) => ({
-          time: time * 1000,
-          open: udfData.o[i],
-          high: udfData.h[i],
-          low: udfData.l[i],
-          close: udfData.c[i],
-          volume: udfData.v ? udfData.v[i] : 0,
-        }))
-        onResult(udfBars, { noData: false })
+        onResult([], { noData: true })
       } catch (err) {
         console.error('[TVDatafeed] getBars error:', err)
         onResult([], { noData: true })
