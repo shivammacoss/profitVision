@@ -1,8 +1,21 @@
 // Custom TradingView Datafeed
-// Historical bars from backend /api/charts/history (built from live LP ticks)
+// Historical bars: backend /api/charts/history first, fallback to TradingView demo UDF
 // Real-time price updates from backend Socket.IO price stream
 import priceStreamService from './priceStream'
 import { API_BASE_URL } from '../config/api'
+
+const UDF_BASE = 'https://demo-feed-data.tradingview.com'
+
+// Map symbols to TradingView UDF equivalents for fallback
+const udfSymbolMap = {
+  'XAUUSD': 'XAUUSD', 'XAGUSD': 'XAGUSD',
+  'EURUSD': 'EURUSD', 'GBPUSD': 'GBPUSD', 'USDJPY': 'USDJPY',
+  'USDCHF': 'USDCHF', 'AUDUSD': 'AUDUSD', 'NZDUSD': 'NZDUSD',
+  'USDCAD': 'USDCAD', 'EURGBP': 'EURGBP', 'EURJPY': 'EURJPY',
+  'GBPJPY': 'GBPJPY', 'BTCUSD': 'BTCUSD', 'ETHUSD': 'ETHUSD',
+  'BNBUSD': 'BNBUSD', 'XRPUSD': 'XRPUSD', 'SOLUSD': 'SOLUSD',
+  'ADAUSD': 'ADAUSD', 'DOGEUSD': 'DOGEUSD',
+}
 
 const resolutionToSeconds = {
   '1': 60, '3': 180, '5': 300, '15': 900, '30': 1800,
@@ -92,30 +105,44 @@ export function createDatafeed() {
       const { from, to } = periodParams
 
       try {
+        // Try backend first
         const url = `${API_BASE_URL}/charts/history?symbol=${symbolInfo.name}&resolution=${resolution}&from=${from}&to=${to}`
         const resp = await fetch(url)
         const data = await resp.json()
 
-        if (data.s === 'no_data' || !data.t || data.t.length === 0) {
+        if (data.s === 'ok' && data.t && data.t.length > 0) {
+          const bars = data.t.map((time, i) => ({
+            time: time * 1000,
+            open: data.o[i],
+            high: data.h[i],
+            low: data.l[i],
+            close: data.c[i],
+            volume: data.v ? data.v[i] : 0,
+          }))
+          onResult(bars, { noData: false })
+          return
+        }
+
+        // Fallback to TradingView demo UDF for historical data
+        const udfSymbol = udfSymbolMap[symbolInfo.name] || symbolInfo.name
+        const udfUrl = `${UDF_BASE}/history?symbol=${udfSymbol}&resolution=${resolution}&from=${from}&to=${to}`
+        const udfResp = await fetch(udfUrl)
+        const udfData = await udfResp.json()
+
+        if (udfData.s === 'no_data' || !udfData.t || udfData.t.length === 0) {
           onResult([], { noData: true })
           return
         }
 
-        if (data.s === 'error') {
-          onResult([], { noData: true })
-          return
-        }
-
-        const bars = data.t.map((time, i) => ({
+        const udfBars = udfData.t.map((time, i) => ({
           time: time * 1000,
-          open: data.o[i],
-          high: data.h[i],
-          low: data.l[i],
-          close: data.c[i],
-          volume: data.v ? data.v[i] : 0,
+          open: udfData.o[i],
+          high: udfData.h[i],
+          low: udfData.l[i],
+          close: udfData.c[i],
+          volume: udfData.v ? udfData.v[i] : 0,
         }))
-
-        onResult(bars, { noData: false })
+        onResult(udfBars, { noData: false })
       } catch (err) {
         console.error('[TVDatafeed] getBars error:', err)
         onResult([], { noData: true })
