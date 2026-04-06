@@ -1,20 +1,79 @@
 // Custom TradingView Datafeed
-// Historical bars: backend /api/charts/history first, fallback to TradingView demo UDF
+// Historical bars: backend /api/charts/history first, fallback to Binance Klines (crypto) or TradingView demo UDF (forex/metals)
 // Real-time price updates from backend Socket.IO price stream
 import priceStreamService from './priceStream'
 import { API_BASE_URL } from '../config/api'
 
 const UDF_BASE = 'https://demo-feed-data.tradingview.com'
 
-// Map symbols to TradingView UDF equivalents for fallback
+const CRYPTO_SYMBOLS = new Set([
+  'BTCUSD','ETHUSD','LTCUSD','XRPUSD','BNBUSD','SOLUSD',
+  'ADAUSD','DOGEUSD','DOTUSD','BCHUSD','AVAXUSD','LINKUSD','MATICUSD',
+  'UNIUSD','ATOMUSD','XLMUSD','ALGOUSD','VETUSD','ICPUSD','FILUSD',
+  'TRXUSD','ETCUSD','XMRUSD','EOSUSD','AAVEUSD','MKRUSD','NEARUSD',
+  'FTMUSD','SANDUSD','MANAUSD','AXSUSD','APEUSD','ARBUSD','OPUSD',
+  'PEPEUSD','SHIBUSD',
+])
+
+// Map our symbols to Binance USDT pairs
+const binanceSymbolMap = {
+  'BTCUSD': 'BTCUSDT', 'ETHUSD': 'ETHUSDT', 'LTCUSD': 'LTCUSDT',
+  'XRPUSD': 'XRPUSDT', 'BNBUSD': 'BNBUSDT', 'SOLUSD': 'SOLUSDT',
+  'ADAUSD': 'ADAUSDT', 'DOGEUSD': 'DOGEUSDT', 'DOTUSD': 'DOTUSDT',
+  'BCHUSD': 'BCHUSDT', 'AVAXUSD': 'AVAXUSDT', 'LINKUSD': 'LINKUSDT',
+  'MATICUSD': 'MATICUSDT', 'UNIUSD': 'UNIUSDT', 'ATOMUSD': 'ATOMUSDT',
+  'XLMUSD': 'XLMUSDT', 'NEARUSD': 'NEARUSDT', 'FTMUSD': 'FTMUSDT',
+  'ALGOUSD': 'ALGOUSDT', 'VETUSD': 'VETUSDT', 'ICPUSD': 'ICPUSDT',
+  'FILUSD': 'FILUSDT', 'TRXUSD': 'TRXUSDT', 'ETCUSD': 'ETCUSDT',
+  'AAVEUSD': 'AAVEUSDT', 'SANDUSD': 'SANDUSDT', 'MANAUSD': 'MANAUSDT',
+  'AXSUSD': 'AXSUSDT', 'APEUSD': 'APEUSDT', 'ARBUSD': 'ARBUSDT',
+  'OPUSD': 'OPUSDT', 'PEPEUSD': 'PEPEUSDT', 'SHIBUSD': 'SHIBUSDT',
+}
+
+// Map TradingView resolution to Binance klines interval
+const resolutionToBinanceInterval = {
+  '1': '1m', '3': '3m', '5': '5m', '15': '15m', '30': '30m',
+  '60': '1h', '120': '2h', '240': '4h',
+  'D': '1d', '1D': '1d', 'W': '1w', '1W': '1w', 'M': '1M', '1M': '1M',
+}
+
+// Map symbols to TradingView UDF equivalents for fallback (forex/metals)
 const udfSymbolMap = {
   'XAUUSD': 'XAUUSD', 'XAGUSD': 'XAGUSD',
   'EURUSD': 'EURUSD', 'GBPUSD': 'GBPUSD', 'USDJPY': 'USDJPY',
   'USDCHF': 'USDCHF', 'AUDUSD': 'AUDUSD', 'NZDUSD': 'NZDUSD',
   'USDCAD': 'USDCAD', 'EURGBP': 'EURGBP', 'EURJPY': 'EURJPY',
-  'GBPJPY': 'GBPJPY', 'BTCUSD': 'BTCUSD', 'ETHUSD': 'ETHUSD',
-  'BNBUSD': 'BNBUSD', 'XRPUSD': 'XRPUSD', 'SOLUSD': 'SOLUSD',
-  'ADAUSD': 'ADAUSD', 'DOGEUSD': 'DOGEUSD',
+  'GBPJPY': 'GBPJPY',
+}
+
+/**
+ * Fetch historical bars from Binance Klines API
+ * Returns bars array or null on failure
+ */
+async function fetchBinanceKlines(symbol, resolution, fromMs, toMs) {
+  const binanceSymbol = binanceSymbolMap[symbol] || (symbol.replace('USD', 'USDT'))
+  const interval = resolutionToBinanceInterval[resolution] || '5m'
+  const limit = 1000
+
+  try {
+    const url = `https://api.binance.com/api/v3/klines?symbol=${binanceSymbol}&interval=${interval}&startTime=${fromMs}&endTime=${toMs}&limit=${limit}`
+    const resp = await fetch(url)
+    if (!resp.ok) return null
+    const data = await resp.json()
+    if (!Array.isArray(data) || data.length === 0) return null
+
+    return data.map(k => ({
+      time: k[0],           // open time in ms
+      open: parseFloat(k[1]),
+      high: parseFloat(k[2]),
+      low: parseFloat(k[3]),
+      close: parseFloat(k[4]),
+      volume: parseFloat(k[5]),
+    }))
+  } catch (err) {
+    console.error('[TVDatafeed] Binance klines error:', err)
+    return null
+  }
 }
 
 const resolutionToSeconds = {
@@ -102,7 +161,9 @@ export function createDatafeed() {
     },
 
     getBars: async (symbolInfo, resolution, periodParams, onResult, onError) => {
-      const { from, to } = periodParams
+      const { from, to, firstDataRequest } = periodParams
+      const fromMs = from * 1000
+      const toMs = to * 1000
 
       try {
         // Try backend first
@@ -123,7 +184,18 @@ export function createDatafeed() {
           return
         }
 
-        // Fallback to TradingView demo UDF for historical data
+        // Fallback: Binance Klines for crypto symbols
+        if (CRYPTO_SYMBOLS.has(symbolInfo.name)) {
+          const bars = await fetchBinanceKlines(symbolInfo.name, resolution, fromMs, toMs)
+          if (bars && bars.length > 0) {
+            onResult(bars, { noData: false })
+            return
+          }
+          onResult([], { noData: true })
+          return
+        }
+
+        // Fallback: TradingView demo UDF for forex/metals
         const udfSymbol = udfSymbolMap[symbolInfo.name] || symbolInfo.name
         const udfUrl = `${UDF_BASE}/history?symbol=${udfSymbol}&resolution=${resolution}&from=${from}&to=${to}`
         const udfResp = await fetch(udfUrl)
