@@ -35,6 +35,8 @@ import paymentGatewaySettingsRoutes from './routes/paymentGatewaySettings.js'
 import creditRoutes from './routes/credit.js'
 import ibModeRoutes from './routes/ibMode.js'
 import lpIntegrationRoutes, { getAllLpPrices } from './routes/lpIntegration.js'
+import chartsRoutes from './routes/charts.js'
+import { startPeriodicFlush } from './services/candleAggregator.js'
 import lpConnectionMonitor from './services/lpConnectionMonitor.js'
 import manualCryptoRoutes from './routes/manualCrypto.js'
 import contactRoutes from './routes/contact.js'
@@ -253,6 +255,7 @@ app.use('/api/payment-gateway', paymentGatewaySettingsRoutes)
 app.use('/api/credit', creditRoutes)
 app.use('/api/ib-mode', ibModeRoutes)
 app.use('/api/lp', lpIntegrationRoutes)
+app.use('/api/charts', chartsRoutes)
 app.use('/api/manual-crypto', manualCryptoRoutes)
 app.use('/api/contact', contactRoutes)
 
@@ -283,4 +286,6 @@ httpServer.listen(PORT, '0.0.0.0', () => {
   
   // Start LP connection monitor - pings Corecen every 30 seconds
   lpConnectionMonitor.startMonitor()
+  // Start candle aggregator periodic flush
+  startPeriodicFlush()
 })

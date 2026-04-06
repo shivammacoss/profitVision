@@ -1,26 +1,8 @@
-// Custom TradingView Datafeed - Hybrid approach:
-// Historical bars from TradingView's public UDF feed
+// Custom TradingView Datafeed
+// Historical bars from backend /api/charts/history (built from live LP ticks)
 // Real-time price updates from backend Socket.IO price stream
 import priceStreamService from './priceStream'
-
-const UDF_BASE = 'https://demo-feed-data.tradingview.com'
-
-// Map internal symbols to TradingView UDF symbols
-const symbolToUDF = {
-  'EURUSD': 'EURUSD', 'GBPUSD': 'GBPUSD', 'USDJPY': 'USDJPY',
-  'USDCHF': 'USDCHF', 'AUDUSD': 'AUDUSD', 'NZDUSD': 'NZDUSD',
-  'USDCAD': 'USDCAD', 'EURGBP': 'EURGBP', 'EURJPY': 'EURJPY',
-  'GBPJPY': 'GBPJPY', 'EURCHF': 'EURCHF', 'EURAUD': 'EURAUD',
-  'EURCAD': 'EURCAD', 'GBPAUD': 'GBPAUD', 'GBPCAD': 'GBPCAD',
-  'AUDCAD': 'AUDCAD', 'AUDJPY': 'AUDJPY', 'CADJPY': 'CADJPY',
-  'CHFJPY': 'CHFJPY', 'NZDJPY': 'NZDJPY',
-  'XAUUSD': 'XAUUSD', 'XAGUSD': 'XAGUSD',
-  'BTCUSD': 'BTCUSD', 'ETHUSD': 'ETHUSD', 'LTCUSD': 'LTCUSD',
-  'XRPUSD': 'XRPUSD', 'BNBUSD': 'BNBUSD', 'SOLUSD': 'SOLUSD',
-  'ADAUSD': 'ADAUSD', 'DOGEUSD': 'DOGEUSD', 'DOTUSD': 'DOTUSD',
-  'BCHUSD': 'BCHUSD', 'AVAXUSD': 'AVAXUSD', 'LINKUSD': 'LINKUSD',
-  'MATICUSD': 'MATICUSD',
-}
+import { API_BASE_URL } from '../config/api'
 
 const resolutionToSeconds = {
   '1': 60, '3': 180, '5': 300, '15': 900, '30': 1800,
@@ -79,18 +61,19 @@ export function createDatafeed() {
     },
 
     searchSymbols: (userInput, exchange, symbolType, onResult) => {
-      const symbols = Object.keys(symbolToUDF)
-      const filtered = symbols.filter(s => 
+      const symbols = [
+        'EURUSD','GBPUSD','USDJPY','USDCHF','AUDUSD','NZDUSD','USDCAD',
+        'EURGBP','EURJPY','GBPJPY','EURCHF','EURAUD','EURCAD','GBPAUD','GBPCAD',
+        'AUDCAD','AUDJPY','CADJPY','CHFJPY','NZDJPY',
+        'XAUUSD','XAGUSD',
+        'BTCUSD','ETHUSD','LTCUSD','XRPUSD','BNBUSD','SOLUSD',
+        'ADAUSD','DOGEUSD','DOTUSD','BCHUSD','AVAXUSD','LINKUSD','MATICUSD',
+      ]
+      const filtered = symbols.filter(s =>
         s.toLowerCase().includes(userInput.toLowerCase())
       ).map(s => {
         const info = getSymbolInfo(s)
-        return {
-          symbol: s,
-          full_name: s,
-          description: s,
-          exchange: info.exchange,
-          type: info.type,
-        }
+        return { symbol: s, full_name: s, description: s, exchange: info.exchange, type: info.type }
       })
       onResult(filtered)
     },
@@ -106,15 +89,19 @@ export function createDatafeed() {
     },
 
     getBars: async (symbolInfo, resolution, periodParams, onResult, onError) => {
-      const { from, to, firstDataRequest } = periodParams
-      const udfSymbol = symbolToUDF[symbolInfo.name] || symbolInfo.name
+      const { from, to } = periodParams
 
       try {
-        const url = `${UDF_BASE}/history?symbol=${udfSymbol}&resolution=${resolution}&from=${from}&to=${to}`
+        const url = `${API_BASE_URL}/charts/history?symbol=${symbolInfo.name}&resolution=${resolution}&from=${from}&to=${to}`
         const resp = await fetch(url)
         const data = await resp.json()
 
         if (data.s === 'no_data' || !data.t || data.t.length === 0) {
+          onResult([], { noData: true })
+          return
+        }
+
+        if (data.s === 'error') {
           onResult([], { noData: true })
           return
         }

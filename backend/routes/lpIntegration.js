@@ -9,6 +9,7 @@
 import express from 'express'
 import crypto from 'crypto'
 import Instrument from '../models/Instrument.js'
+import { processBatchTicks } from '../services/candleAggregator.js'
 
 const router = express.Router()
 
@@ -217,6 +218,9 @@ router.post('/prices/batch', validateLpRequest, (req, res) => {
         source: 'CORECEN_LP',
       })
     }
+
+    // Aggregate ticks into OHLC candles
+    processBatchTicks(ticks.map(t => ({ ...t, timestamp: t.timestamp || now })))
 
     // Emit to connected WebSocket clients (if io is available)
     if (global.io) {
