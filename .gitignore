@@ -34,5 +34,5 @@ Thumbs.db
 # Uploads
 uploads/
 
-# TradingView Charting Library (too large for git - deploy separately)
-frontend/public/charting_library/
+# TradingView Charting Library
+# frontend/public/charting_library/
