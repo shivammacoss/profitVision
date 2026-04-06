@@ -42,6 +42,7 @@ import AdminManualCrypto from './pages/AdminManualCrypto'
 import BuyChallengePage from './pages/BuyChallengePage'
 import ChallengeDashboardPage from './pages/ChallengeDashboardPage'
 import BrandedLogin from './pages/BrandedLogin'
+import ChartEmbed from './pages/ChartEmbed'
 import BrandedSignup from './pages/BrandedSignup'
 import ProfitVisionLanding from './pages/ProfitVisionLanding'
 import ChatBot from './components/ChatBot'
@@ -95,6 +96,7 @@ function App() {
         <Route path="/admin/manual-crypto" element={<AdminManualCrypto />} />
         <Route path="/buy-challenge" element={<BuyChallengePage />} />
         <Route path="/challenge-dashboard" element={<ChallengeDashboardPage />} />
+        <Route path="/chart-embed" element={<ChartEmbed />} />
         <Route path="/:slug/login" element={<BrandedLogin />} />
         <Route path="/:slug/signup" element={<BrandedSignup />} />
       </Routes>

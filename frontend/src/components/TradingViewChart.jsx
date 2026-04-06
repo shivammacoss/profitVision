@@ -1,7 +1,7 @@
 import { useEffect, useRef, memo } from 'react'
 import { createDatafeed } from '../services/tvDatafeed'
 
-const TradingViewChart = memo(({ symbol = 'XAUUSD', theme = 'dark', isMobile = false }) => {
+const TradingViewChart = memo(({ symbol = 'XAUUSD', theme = 'dark', isMobile = false, interval = '5' }) => {
   const containerRef = useRef(null)
   const widgetRef = useRef(null)
 
@@ -38,7 +38,7 @@ const TradingViewChart = memo(({ symbol = 'XAUUSD', theme = 'dark', isMobile = f
       library_path: '/charting_library/',
       locale: 'en',
       symbol: symbol,
-      interval: '5',
+      interval: interval,
       fullscreen: false,
       autosize: true,
       theme: theme === 'dark' ? 'dark' : 'light',
@@ -77,7 +77,7 @@ const TradingViewChart = memo(({ symbol = 'XAUUSD', theme = 'dark', isMobile = f
         widgetRef.current = null
       }
     }
-  }, [symbol, theme, isMobile])
+  }, [symbol, theme, isMobile, interval])
 
   return (
     <div
