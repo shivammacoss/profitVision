@@ -300,8 +300,8 @@ class CopyTradingEngine {
         const equityRatio = masterEquity > 0 ? (followerEquity / masterEquity) : 0
         const calculatedLotRaw = masterLot * equityRatio
         
-        // Round DOWN to nearest lot step (floor) - never round up
-        const roundedLot = Math.floor(calculatedLotRaw / LOT_STEP) * LOT_STEP
+        // Round to nearest lot step (proportional)
+        const roundedLot = Math.round(calculatedLotRaw / LOT_STEP) * LOT_STEP
         // Ensure 2 decimal places
         const roundedLot2dp = Math.round(roundedLot * 100) / 100
         // Apply minimum and maximum lot limits
